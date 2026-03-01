@@ -47,7 +47,7 @@ type AgentLoop struct {
 	state          *state.Manager
 	running        atomic.Bool
 	summarizing    sync.Map
-	blackboards    sync.Map
+	blackboards    *blackboardStore
 	fallback       *providers.FallbackChain
 	channelManager *channels.Manager
 	mediaStore     media.MediaStore
@@ -97,6 +97,7 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 		registry:    registry,
 		state:       stateManager,
 		summarizing: sync.Map{},
+		blackboards: newBlackboardStore(defaultBlackboardCacheSize),
 		fallback:    fallbackChain,
 		cronService: cronService,
 	}
@@ -255,9 +256,8 @@ func registerSharedTools(
 		agent.Tools.Register(spawnTool)
 
 		// Multi-agent tools (blackboard + handoff)
-		blackboard := multiagent.NewBlackboard()
-		agent.Tools.Register(multiagent.NewBlackboardTool(blackboard, currentAgentID))
-		handoffTool := multiagent.NewHandoffTool(multiagentResolver, blackboard, currentAgentID)
+		agent.Tools.Register(multiagent.NewBlackboardTool(nil, currentAgentID))
+		handoffTool := multiagent.NewHandoffTool(multiagentResolver, nil, currentAgentID)
 		handoffTool.SetAllowlistChecker(multiagent.AllowlistCheckerFunc(func(fromAgentID, toAgentID string) bool {
 			return registry.CanSpawnSubagent(fromAgentID, toAgentID)
 		}))
@@ -700,7 +700,6 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 
 	// 1. Update tool contexts
 	al.updateToolContexts(agent, opts.Channel, opts.ChatID)
-	al.updateToolBlackboard(agent, opts.SessionKey)
 
 	// 2. Build messages (skip history for heartbeat)
 	var history []providers.Message
@@ -828,6 +827,7 @@ func (al *AgentLoop) runLLMIteration(
 ) (string, int, error) {
 	iteration := 0
 	var finalContent string
+	toolCtx := al.toolContext(ctx, opts.SessionKey, opts.NoHistory)
 
 	for iteration < agent.MaxIterations {
 		iteration++
@@ -1073,7 +1073,7 @@ func (al *AgentLoop) runLLMIteration(
 			}
 
 			toolResult := agent.Tools.ExecuteWithContext(
-				ctx,
+				toolCtx,
 				tc.Name,
 				tc.Arguments,
 				opts.Channel,
@@ -1140,12 +1140,7 @@ func (al *AgentLoop) runLLMIteration(
 
 // updateToolContexts updates the context for tools that need channel/chatID info.
 func (al *AgentLoop) updateToolContexts(agent *AgentInstance, channel, chatID string) {
-	contextualTools := []string{
-		"message", "spawn", "subagent",
-		"sessions_send", "cron", "channel_actions",
-		"handoff",
-	}
-	for _, name := range contextualTools {
+	for _, name := range agent.Tools.List() {
 		if tool, ok := agent.Tools.Get(name); ok {
 			if ct, ok := tool.(tools.ContextualTool); ok {
 				ct.SetContext(channel, chatID)
@@ -1154,31 +1149,15 @@ func (al *AgentLoop) updateToolContexts(agent *AgentInstance, channel, chatID st
 	}
 }
 
-// updateToolBlackboard wires the session blackboard into board-aware tools.
-func (al *AgentLoop) updateToolBlackboard(agent *AgentInstance, sessionKey string) {
-	board := al.getBlackboard(sessionKey)
-	boardTools := []string{"blackboard", "handoff"}
-	for _, name := range boardTools {
-		if tool, ok := agent.Tools.Get(name); ok {
-			if ba, ok := tool.(multiagent.BoardAware); ok {
-				ba.SetBoard(board)
-			}
-		}
+func (al *AgentLoop) toolContext(ctx context.Context, sessionKey string, ephemeral bool) context.Context {
+	if ephemeral {
+		return multiagent.WithBlackboard(ctx, multiagent.NewBlackboard())
 	}
-}
-
-// getBlackboard returns the per-session blackboard (creates it if missing).
-func (al *AgentLoop) getBlackboard(sessionKey string) *multiagent.Blackboard {
-	key := strings.TrimSpace(sessionKey)
-	if key == "" {
-		key = "default"
+	if al.blackboards == nil {
+		return ctx
 	}
-	if existing, ok := al.blackboards.Load(key); ok {
-		return existing.(*multiagent.Blackboard)
-	}
-	board := multiagent.NewBlackboard()
-	actual, _ := al.blackboards.LoadOrStore(key, board)
-	return actual.(*multiagent.Blackboard)
+	board := al.blackboards.Get(strings.TrimSpace(sessionKey))
+	return multiagent.WithBlackboard(ctx, board)
 }
 
 // maybeSummarize triggers summarization if the session history exceeds thresholds.

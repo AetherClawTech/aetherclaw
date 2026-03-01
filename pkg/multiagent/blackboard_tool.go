@@ -62,7 +62,15 @@ func (t *BlackboardTool) Parameters() map[string]any {
 }
 
 // Execute runs the blackboard action specified in args.
-func (t *BlackboardTool) Execute(_ context.Context, args map[string]any) *tools.ToolResult {
+func (t *BlackboardTool) Execute(ctx context.Context, args map[string]any) *tools.ToolResult {
+	board := t.board
+	if ctxBoard := BlackboardFromContext(ctx); ctxBoard != nil {
+		board = ctxBoard
+	}
+	if board == nil {
+		return tools.ErrorResult("blackboard not initialized")
+	}
+
 	action, ok := args["action"].(string)
 	if !ok {
 		action = ""
@@ -81,7 +89,7 @@ func (t *BlackboardTool) Execute(_ context.Context, args map[string]any) *tools.
 		if key == "" {
 			return tools.ErrorResult("key is required for read action")
 		}
-		entry := t.board.GetEntry(key)
+		entry := board.GetEntry(key)
 		if entry == nil {
 			return tools.NewToolResult(fmt.Sprintf("No entry found for key %q", key))
 		}
@@ -95,18 +103,18 @@ func (t *BlackboardTool) Execute(_ context.Context, args map[string]any) *tools.
 		if value == "" {
 			return tools.ErrorResult("value is required for write action")
 		}
-		t.board.Set(key, value, t.agentID)
+		board.Set(key, value, t.agentID)
 		return tools.NewToolResult(fmt.Sprintf("Written key %q to blackboard", key))
 
 	case "list":
-		keys := t.board.List()
+		keys := board.List()
 		if len(keys) == 0 {
 			return tools.NewToolResult("Blackboard is empty")
 		}
 		var sb strings.Builder
 		fmt.Fprintf(&sb, "Blackboard entries (%d):\n", len(keys))
 		for _, k := range keys {
-			entry := t.board.GetEntry(k)
+			entry := board.GetEntry(k)
 			if entry != nil {
 				fmt.Fprintf(&sb, "- %s (by %s): %s\n", k, entry.Author, entry.Value)
 			}
@@ -117,7 +125,7 @@ func (t *BlackboardTool) Execute(_ context.Context, args map[string]any) *tools.
 		if key == "" {
 			return tools.ErrorResult("key is required for delete action")
 		}
-		if t.board.Delete(key) {
+		if board.Delete(key) {
 			return tools.NewToolResult(fmt.Sprintf("Deleted key %q from blackboard", key))
 		}
 		return tools.NewToolResult(fmt.Sprintf("Key %q not found on blackboard", key))

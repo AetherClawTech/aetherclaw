@@ -147,7 +147,12 @@ func (t *SpawnTool) Execute(ctx context.Context, args map[string]any) *tools.Too
 		}
 	}
 
-	result := t.spawnManager.AsyncSpawn(ctx, t.resolver, t.board, SpawnRequest{
+	board := t.board
+	if ctxBoard := BlackboardFromContext(ctx); ctxBoard != nil {
+		board = ctxBoard
+	}
+
+	result := t.spawnManager.AsyncSpawn(ctx, t.resolver, board, SpawnRequest{
 		FromAgentID:  t.fromAgentID,
 		ToAgentID:    agentID,
 		Task:         task,
@@ -163,7 +168,7 @@ func (t *SpawnTool) Execute(ctx context.Context, args map[string]any) *tools.Too
 	}
 
 	return &tools.ToolResult{
-		ForLLM: fmt.Sprintf("Agent %q spawned (run_id: %s). It runs asynchronously — the result will auto-announce back when complete. Continue with other work.", agentID, result.RunID),
+		ForLLM:  fmt.Sprintf("Agent %q spawned (run_id: %s). It runs asynchronously — the result will auto-announce back when complete. Continue with other work.", agentID, result.RunID),
 		ForUser: fmt.Sprintf("Spawned agent %q (run: %s)", agentID, result.RunID),
 	}
 }

@@ -8,6 +8,8 @@ type multiagentResolver struct {
 	registry *AgentRegistry
 }
 
+// NOTE: This adapter lives in pkg/agent to avoid import cycles.
+// The multiagent package must not depend on pkg/agent.
 func newMultiagentResolver(registry *AgentRegistry) *multiagentResolver {
 	return &multiagentResolver{registry: registry}
 }
@@ -19,13 +21,15 @@ func (r *multiagentResolver) GetAgentInfo(agentID string) *multiagent.AgentInfo 
 	}
 
 	return &multiagent.AgentInfo{
-		ID:           agent.ID,
-		Name:         agent.Name,
-		SystemPrompt: agent.ContextBuilder.BuildSystemPromptWithCache(),
-		Model:        agent.Model,
-		Provider:     agent.Provider,
-		Tools:        agent.Tools,
-		MaxIter:      agent.MaxIterations,
+		ID:   agent.ID,
+		Name: agent.Name,
+		SystemPromptFn: func() string {
+			return agent.ContextBuilder.BuildSystemPromptWithCache()
+		},
+		Model:    agent.Model,
+		Provider: agent.Provider,
+		Tools:    agent.Tools,
+		MaxIter:  agent.MaxIterations,
 	}
 }
 
