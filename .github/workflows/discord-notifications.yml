@@ -1,0 +1,235 @@
+name: Discord Notifications
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    types: [opened, closed, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, closed, reopened]
+  issue_comment:
+    types: [created]
+  release:
+    types: [published]
+  create:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Push notification
+        if: github.event_name == 'push'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          COMMIT_COUNT=$(echo '${{ toJson(github.event.commits) }}' | jq 'length')
+          AUTHOR="${{ github.event.head_commit.author.username || github.event.head_commit.author.name }}"
+          COMMIT_MSG=$(echo '${{ github.event.head_commit.message }}' | head -1 | sed 's/"/\\"/g' | cut -c1-100)
+          COMMIT_URL="${{ github.event.head_commit.url }}"
+          SHORT_SHA="${{ github.event.head_commit.id }}"
+          SHORT_SHA="${SHORT_SHA:0:7}"
+          REPO="${{ github.repository }}"
+
+          curl -s -H "Content-Type: application/json" -d "{
+            \"embeds\": [{
+              \"title\": \"[${REPO}:${BRANCH}] ${COMMIT_COUNT} new commit(s)\",
+              \"url\": \"${COMMIT_URL}\",
+              \"description\": \"[\`${SHORT_SHA}\`](${COMMIT_URL}) ${COMMIT_MSG} — ${AUTHOR}\",
+              \"color\": 7506394
+            }]
+          }" "$DISCORD_WEBHOOK"
+
+      - name: PR notification
+        if: github.event_name == 'pull_request'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          ACTION="${{ github.event.action }}"
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PR_TITLE=$(echo '${{ github.event.pull_request.title }}' | sed 's/"/\\"/g' | cut -c1-100)
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          AUTHOR="${{ github.event.pull_request.user.login }}"
+          REPO="${{ github.repository }}"
+          MERGED="${{ github.event.pull_request.merged }}"
+
+          if [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then
+            LABEL="merged"
+            COLOR=8311585
+          elif [ "$ACTION" = "closed" ]; then
+            LABEL="closed"
+            COLOR=15158332
+          elif [ "$ACTION" = "opened" ]; then
+            LABEL="opened"
+            COLOR=3066993
+          elif [ "$ACTION" = "synchronize" ]; then
+            LABEL="updated"
+            COLOR=15844367
+          elif [ "$ACTION" = "ready_for_review" ]; then
+            LABEL="ready for review"
+            COLOR=3447003
+          else
+            LABEL="${ACTION}"
+            COLOR=9807270
+          fi
+
+          ADDITIONS="${{ github.event.pull_request.additions }}"
+          DELETIONS="${{ github.event.pull_request.deletions }}"
+          FILES="${{ github.event.pull_request.changed_files }}"
+
+          curl -s -H "Content-Type: application/json" -d "{
+            \"embeds\": [{
+              \"title\": \"[${REPO}] PR #${PR_NUM} ${LABEL}\",
+              \"url\": \"${PR_URL}\",
+              \"description\": \"**${PR_TITLE}**\nby ${AUTHOR} — +${ADDITIONS} -${DELETIONS} (${FILES} files)\",
+              \"color\": ${COLOR}
+            }]
+          }" "$DISCORD_WEBHOOK"
+
+      - name: PR review notification
+        if: github.event_name == 'pull_request_review'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          STATE="${{ github.event.review.state }}"
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PR_TITLE=$(echo '${{ github.event.pull_request.title }}' | sed 's/"/\\"/g' | cut -c1-100)
+          REVIEW_URL="${{ github.event.review.html_url }}"
+          REVIEWER="${{ github.event.review.user.login }}"
+          REPO="${{ github.repository }}"
+
+          if [ "$STATE" = "approved" ]; then
+            EMOJI="approved"
+            COLOR=3066993
+          elif [ "$STATE" = "changes_requested" ]; then
+            EMOJI="changes requested"
+            COLOR=15158332
+          else
+            EMOJI="commented"
+            COLOR=9807270
+          fi
+
+          BODY=$(echo '${{ github.event.review.body }}' | head -3 | sed 's/"/\\"/g' | cut -c1-200)
+
+          curl -s -H "Content-Type: application/json" -d "{
+            \"embeds\": [{
+              \"title\": \"[${REPO}] PR #${PR_NUM} review: ${EMOJI}\",
+              \"url\": \"${REVIEW_URL}\",
+              \"description\": \"**${PR_TITLE}**\nby ${REVIEWER}\n\n${BODY}\",
+              \"color\": ${COLOR}
+            }]
+          }" "$DISCORD_WEBHOOK"
+
+      - name: Review comment notification
+        if: github.event_name == 'pull_request_review_comment'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          COMMENT_URL="${{ github.event.comment.html_url }}"
+          AUTHOR="${{ github.event.comment.user.login }}"
+          FILE="${{ github.event.comment.path }}"
+          REPO="${{ github.repository }}"
+          BODY=$(echo '${{ github.event.comment.body }}' | head -3 | sed 's/"/\\"/g' | cut -c1-300)
+
+          curl -s -H "Content-Type: application/json" -d "{
+            \"embeds\": [{
+              \"title\": \"[${REPO}] PR #${PR_NUM} inline comment\",
+              \"url\": \"${COMMENT_URL}\",
+              \"description\": \"**${FILE}**\nby ${AUTHOR}\n\n${BODY}\",
+              \"color\": 9807270
+            }]
+          }" "$DISCORD_WEBHOOK"
+
+      - name: Issue notification
+        if: github.event_name == 'issues'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          ACTION="${{ github.event.action }}"
+          ISSUE_NUM="${{ github.event.issue.number }}"
+          ISSUE_TITLE=$(echo '${{ github.event.issue.title }}' | sed 's/"/\\"/g' | cut -c1-100)
+          ISSUE_URL="${{ github.event.issue.html_url }}"
+          AUTHOR="${{ github.event.issue.user.login }}"
+          REPO="${{ github.repository }}"
+
+          if [ "$ACTION" = "opened" ]; then
+            COLOR=3066993
+          elif [ "$ACTION" = "closed" ]; then
+            COLOR=15158332
+          else
+            COLOR=9807270
+          fi
+
+          curl -s -H "Content-Type: application/json" -d "{
+            \"embeds\": [{
+              \"title\": \"[${REPO}] Issue #${ISSUE_NUM} ${ACTION}\",
+              \"url\": \"${ISSUE_URL}\",
+              \"description\": \"**${ISSUE_TITLE}**\nby ${AUTHOR}\",
+              \"color\": ${COLOR}
+            }]
+          }" "$DISCORD_WEBHOOK"
+
+      - name: Issue comment notification
+        if: github.event_name == 'issue_comment'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          ISSUE_NUM="${{ github.event.issue.number }}"
+          COMMENT_URL="${{ github.event.comment.html_url }}"
+          AUTHOR="${{ github.event.comment.user.login }}"
+          REPO="${{ github.repository }}"
+          BODY=$(echo '${{ github.event.comment.body }}' | head -3 | sed 's/"/\\"/g' | cut -c1-300)
+
+          curl -s -H "Content-Type: application/json" -d "{
+            \"embeds\": [{
+              \"title\": \"[${REPO}] Comment on #${ISSUE_NUM}\",
+              \"url\": \"${COMMENT_URL}\",
+              \"description\": \"by ${AUTHOR}\n\n${BODY}\",
+              \"color\": 9807270
+            }]
+          }" "$DISCORD_WEBHOOK"
+
+      - name: Release notification
+        if: github.event_name == 'release'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          NAME=$(echo '${{ github.event.release.name }}' | sed 's/"/\\"/g' | cut -c1-100)
+          URL="${{ github.event.release.html_url }}"
+          AUTHOR="${{ github.event.release.author.login }}"
+          REPO="${{ github.repository }}"
+          BODY=$(echo '${{ github.event.release.body }}' | head -5 | sed 's/"/\\"/g' | cut -c1-500)
+
+          curl -s -H "Content-Type: application/json" -d "{
+            \"embeds\": [{
+              \"title\": \"[${REPO}] Release ${TAG}\",
+              \"url\": \"${URL}\",
+              \"description\": \"**${NAME}**\nby ${AUTHOR}\n\n${BODY}\",
+              \"color\": 15844367
+            }]
+          }" "$DISCORD_WEBHOOK"
+
+      - name: Branch/tag created notification
+        if: github.event_name == 'create'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          REF_TYPE="${{ github.event.ref_type }}"
+          REF="${{ github.event.ref }}"
+          AUTHOR="${{ github.actor }}"
+          REPO="${{ github.repository }}"
+
+          curl -s -H "Content-Type: application/json" -d "{
+            \"embeds\": [{
+              \"title\": \"[${REPO}] ${REF_TYPE} created: ${REF}\",
+              \"url\": \"https://github.com/${REPO}\",
+              \"description\": \"by ${AUTHOR}\",
+              \"color\": 3447003
+            }]
+          }" "$DISCORD_WEBHOOK"
