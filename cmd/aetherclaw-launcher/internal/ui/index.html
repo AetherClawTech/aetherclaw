@@ -5,15 +5,15 @@
     <script>
     // Apply theme before paint to avoid flash
     (function(){
-        var s = localStorage.getItem('picoclaw-theme') || 'system';
+        var s = localStorage.getItem('aetherclaw-theme') || 'system';
         var t = s === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : s;
         document.documentElement.setAttribute('data-theme', t);
     })();
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PicoClaw Config</title>
-    <meta name="description" content="PicoClaw configuration editor">
+    <title>AetherClaw Config</title>
+    <meta name="description" content="AetherClaw configuration editor">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
@@ -501,7 +501,7 @@
 <header class="header">
     <div class="header-left">
         <div class="logo">P</div>
-        <h1>PicoClaw <span>Config</span></h1>
+        <h1>AetherClaw <span>Config</span></h1>
     </div>
     <div class="header-center">
         <button class="btn btn-run btn-process" id="btnRunStop" disabled>
@@ -677,7 +677,7 @@
 </div>
 
 <footer class="footer">
-    <span>PicoClaw Config</span>
+    <span>AetherClaw Config</span>
     <span id="jsonStatus">-</span>
 </footer>
 
@@ -685,7 +685,7 @@
 // ── Theme ───────────────────────────────────────────
 const themeIcons = { light: '\u2600\uFE0F', dark: '\uD83C\uDF19', system: '\uD83D\uDCBB' };
 const themeOrder = ['system', 'light', 'dark'];
-let currentThemeSetting = localStorage.getItem('picoclaw-theme') || 'system';
+let currentThemeSetting = localStorage.getItem('aetherclaw-theme') || 'system';
 
 function getSystemTheme() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -699,7 +699,7 @@ function applyTheme() {
 function cycleTheme() {
     const idx = themeOrder.indexOf(currentThemeSetting);
     currentThemeSetting = themeOrder[(idx + 1) % themeOrder.length];
-    localStorage.setItem('picoclaw-theme', currentThemeSetting);
+    localStorage.setItem('aetherclaw-theme', currentThemeSetting);
     applyTheme();
 }
 // Listen for system theme changes
@@ -756,7 +756,7 @@ const i18nData = {
         'field.requestTimeout': 'Request Timeout (s)',
         // Auth
         'auth.title': 'Provider Authentication',
-        'auth.desc': 'Login to providers using OAuth or API tokens. Credentials are stored locally in <code style="font-family:\'JetBrains Mono\',monospace;font-size:12px;background:var(--bg-elevated);padding:2px 6px;border-radius:4px;">~/.picoclaw/auth.json</code>.',
+        'auth.desc': 'Login to providers using OAuth or API tokens. Credentials are stored locally in <code style="font-family:\'JetBrains Mono\',monospace;font-size:12px;background:var(--bg-elevated);padding:2px 6px;border-radius:4px;">~/.aetherclaw/auth.json</code>.',
         'auth.notLoggedIn': 'Not logged in',
         'auth.active': 'Active',
         'auth.expired': 'Expired',
@@ -870,7 +870,7 @@ const i18nData = {
         'field.rpm': 'RPM \u9650\u5236',
         'field.requestTimeout': '\u8BF7\u6C42\u8D85\u65F6 (\u79D2)',
         'auth.title': '\u63D0\u4F9B\u5546\u8BA4\u8BC1',
-        'auth.desc': '\u901A\u8FC7 OAuth \u6216 API Token \u767B\u5F55\u63D0\u4F9B\u5546\u3002\u51ED\u8BC1\u5B58\u50A8\u5728\u672C\u5730 <code style="font-family:\'JetBrains Mono\',monospace;font-size:12px;background:var(--bg-elevated);padding:2px 6px;border-radius:4px;">~/.picoclaw/auth.json</code>\u3002',
+        'auth.desc': '\u901A\u8FC7 OAuth \u6216 API Token \u767B\u5F55\u63D0\u4F9B\u5546\u3002\u51ED\u8BC1\u5B58\u50A8\u5728\u672C\u5730 <code style="font-family:\'JetBrains Mono\',monospace;font-size:12px;background:var(--bg-elevated);padding:2px 6px;border-radius:4px;">~/.aetherclaw/auth.json</code>\u3002',
         'auth.notLoggedIn': '\u672A\u767B\u5F55',
         'auth.active': '\u5DF2\u6FC0\u6D3B',
         'auth.expired': '\u5DF2\u8FC7\u671F',
@@ -941,7 +941,7 @@ const i18nData = {
     }
 };
 
-let currentLang = localStorage.getItem('picoclaw-lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en');
+let currentLang = localStorage.getItem('aetherclaw-lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en');
 
 function t(key, params) {
     let s = (i18nData[currentLang] && i18nData[currentLang][key]) || i18nData.en[key] || key;
@@ -968,7 +968,7 @@ function applyI18n() {
 
 function toggleLang() {
     currentLang = currentLang === 'en' ? 'zh' : 'en';
-    localStorage.setItem('picoclaw-lang', currentLang);
+    localStorage.setItem('aetherclaw-lang', currentLang);
     applyI18n();
     // Re-render process button text
     updateRunStopButton(gatewayRunning);
@@ -1406,7 +1406,7 @@ function renderChannelForm(chKey) {
     let html = `<div class="panel-title">${schema.title}</div>`;
     html += `<div class="panel-desc">${t('ch.configure', { name: schema.title })}`;
     if (schema.docSlug) {
-        const docBase = currentLang === 'zh' ? 'https://docs.picoclaw.io/zh-Hans/docs/channels/' : 'https://docs.picoclaw.io/docs/channels/';
+        const docBase = 'https://aetherclaw.dev/docs/';
         html += ` <a class="doc-link" href="${docBase}${schema.docSlug}" target="_blank" rel="noopener noreferrer">\u{1F4D6} ${t('ch.docLink')}</a>`;
     }
     html += `</div>`;
