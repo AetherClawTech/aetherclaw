@@ -1,6 +1,21 @@
+<p align="center">
+  <img src="assets/brand/aetherclaw.png" width="128" alt="AetherClaw">
+</p>
+
 # AetherClaw
 
+[![build](https://github.com/AetherClawTech/aetherclaw/actions/workflows/build.yml/badge.svg)](https://github.com/AetherClawTech/aetherclaw/actions/workflows/build.yml)
+
 A lightweight, single-binary AI agent that runs anywhere — from cloud servers to Raspberry Pi Zero.
+
+```
+      .-----------.
+     /             \
+    |      ///      |
+     \             /
+      '-----------'
+       AetherClaw
+```
 
 ## Features
 
