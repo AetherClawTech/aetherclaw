@@ -1,29 +1,29 @@
 services:
   # ─────────────────────────────────────────────
-  # PicoClaw Agent (one-shot query)
-  #   docker compose -f docker/docker-compose.yml run --rm picoclaw-agent -m "Hello"
+  # AetherClaw Agent (one-shot query)
+  #   docker compose -f docker/docker-compose.yml run --rm aetherclaw-agent -m "Hello"
   # ─────────────────────────────────────────────
-  picoclaw-agent:
-    image: docker.io/sipeed/picoclaw:latest
-    container_name: picoclaw-agent
+  aetherclaw-agent:
+    image: docker.io/aetherclaw/aetherclaw:latest
+    container_name: aetherclaw-agent
     profiles:
       - agent
     # Uncomment to access host network; leave commented unless needed.
     #extra_hosts:
     #  - "host.docker.internal:host-gateway"
     volumes:
-      - ./data:/root/.picoclaw
-    entrypoint: ["picoclaw", "agent"]
+      - ./data:/root/.aetherclaw
+    entrypoint: ["aetherclaw", "agent"]
     stdin_open: true
     tty: true
 
   # ─────────────────────────────────────────────
-  # PicoClaw Gateway (Long-running Bot)
-  #   docker compose -f docker/docker-compose.yml up picoclaw-gateway
+  # AetherClaw Gateway (Long-running Bot)
+  #   docker compose -f docker/docker-compose.yml up aetherclaw-gateway
   # ─────────────────────────────────────────────
-  picoclaw-gateway:
-    image: docker.io/sipeed/picoclaw:latest
-    container_name: picoclaw-gateway
+  aetherclaw-gateway:
+    image: docker.io/aetherclaw/aetherclaw:latest
+    container_name: aetherclaw-gateway
     restart: on-failure
     profiles:
       - gateway
@@ -31,4 +31,4 @@ services:
     #extra_hosts:
     #  - "host.docker.internal:host-gateway"
     volumes:
-      - ./data:/root/.picoclaw
+      - ./data:/root/.aetherclaw

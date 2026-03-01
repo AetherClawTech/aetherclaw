@@ -53,4 +53,4 @@ Discussions: https://github.com/AetherClawTech/aetherclaw/discussions
 ---
 
 "Every bit helps, every bit matters."
-- Picoclaw
+- AetherClaw
