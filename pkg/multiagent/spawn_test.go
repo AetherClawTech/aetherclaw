@@ -236,6 +236,49 @@ func TestAsyncSpawn_ContextTimeout(t *testing.T) {
 	}
 }
 
+func TestSpawnTool_ContextBoard(t *testing.T) {
+	registry := NewRunRegistry()
+	announcer := NewAnnouncer(10)
+	sm := NewSpawnManager(registry, announcer, 5, 5*time.Second)
+
+	resolver := &mockAgentResolver{
+		agents: map[string]*AgentInfo{
+			"worker": {
+				ID:       "worker",
+				Name:     "Worker",
+				Role:     "test worker",
+				Provider: &mockLLMProvider{response: "ok"},
+				Tools:    tools.NewToolRegistry(),
+				MaxIter:  2,
+			},
+		},
+	}
+
+	board := NewBlackboard()
+	tool := NewSpawnTool(resolver, nil, sm, "main")
+	ctx := WithBlackboard(context.Background(), board)
+
+	result := tool.Execute(ctx, map[string]any{
+		"agent_id": "worker",
+		"task":     "do the thing",
+		"context": map[string]any{
+			"env": "staging",
+		},
+	})
+	if result.IsError {
+		t.Fatalf("spawn failed: %s", result.ForLLM)
+	}
+
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		if board.Get("env") == "staging" {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("expected context to be written to blackboard")
+}
+
 func TestAsyncSpawn_ParallelFanOut(t *testing.T) {
 	registry := NewRunRegistry()
 	announcer := NewAnnouncer(20)

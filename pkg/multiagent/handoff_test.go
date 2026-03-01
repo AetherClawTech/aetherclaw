@@ -260,6 +260,36 @@ func TestHandoffTool_ExecuteNoAgentNoCapability(t *testing.T) {
 	}
 }
 
+func TestHandoffTool_ContextBoard(t *testing.T) {
+	provider := &mockProvider{response: "done"}
+	resolver := newMockResolver(&AgentInfo{
+		ID:       "worker",
+		Name:     "Worker",
+		Model:    "test",
+		Provider: provider,
+		Tools:    tools.NewToolRegistry(),
+		MaxIter:  2,
+	})
+
+	board := NewBlackboard()
+	tool := NewHandoffTool(resolver, nil, "main")
+	ctx := WithBlackboard(context.Background(), board)
+
+	result := tool.Execute(ctx, map[string]any{
+		"agent_id": "worker",
+		"task":     "do the thing",
+		"context": map[string]any{
+			"region": "us-east-1",
+		},
+	})
+	if result.IsError {
+		t.Fatalf("handoff failed: %s", result.ForLLM)
+	}
+	if got := board.Get("region"); got != "us-east-1" {
+		t.Fatalf("board value = %q, want %q", got, "us-east-1")
+	}
+}
+
 func TestListAgentsTool_Execute(t *testing.T) {
 	resolver := newMockResolver(
 		&AgentInfo{ID: "main", Name: "Main Agent", Role: "general"},
