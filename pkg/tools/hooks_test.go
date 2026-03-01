@@ -13,7 +13,7 @@ type testHook struct {
 	blockTool   string // if non-empty, block this tool name
 }
 
-func (h *testHook) BeforeExecute(_ context.Context, toolName string, _ map[string]interface{}) error {
+func (h *testHook) BeforeExecute(_ context.Context, toolName string, _ map[string]any) error {
 	h.beforeCalls = append(h.beforeCalls, toolName)
 	if h.blockTool != "" && toolName == h.blockTool {
 		return errors.New("blocked by test hook")
@@ -21,7 +21,7 @@ func (h *testHook) BeforeExecute(_ context.Context, toolName string, _ map[strin
 	return nil
 }
 
-func (h *testHook) AfterExecute(_ context.Context, toolName string, _ map[string]interface{}, _ *ToolResult) {
+func (h *testHook) AfterExecute(_ context.Context, toolName string, _ map[string]any, _ *ToolResult) {
 	h.afterCalls = append(h.afterCalls, toolName)
 }
 
@@ -30,10 +30,10 @@ type dummyTool struct {
 	name string
 }
 
-func (d *dummyTool) Name() string                       { return d.name }
-func (d *dummyTool) Description() string                { return "test tool" }
-func (d *dummyTool) Parameters() map[string]interface{} { return nil }
-func (d *dummyTool) Execute(_ context.Context, _ map[string]interface{}) *ToolResult {
+func (d *dummyTool) Name() string               { return d.name }
+func (d *dummyTool) Description() string        { return "test tool" }
+func (d *dummyTool) Parameters() map[string]any { return nil }
+func (d *dummyTool) Execute(_ context.Context, _ map[string]any) *ToolResult {
 	return NewToolResult("ok")
 }
 

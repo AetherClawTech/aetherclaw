@@ -26,16 +26,16 @@ func (t *UsageTool) Description() string {
 	return "View LLM usage statistics: token counts, costs, per-model breakdown. Use action 'today' for today's usage, 'range' for multiple days, or 'summary' for a quick overview."
 }
 
-func (t *UsageTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *UsageTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"action": map[string]interface{}{
+		"properties": map[string]any{
+			"action": map[string]any{
 				"type":        "string",
 				"description": "Action: 'today', 'range', or 'summary'",
 				"enum":        []string{"today", "range", "summary"},
 			},
-			"days": map[string]interface{}{
+			"days": map[string]any{
 				"type":        "integer",
 				"description": "Number of days for 'range' action (default: 7)",
 			},
@@ -44,7 +44,7 @@ func (t *UsageTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *UsageTool) Execute(_ context.Context, args map[string]interface{}) *ToolResult {
+func (t *UsageTool) Execute(_ context.Context, args map[string]any) *ToolResult {
 	action, _ := args["action"].(string)
 	if action == "" {
 		action = "today"
@@ -100,7 +100,7 @@ func (t *UsageTool) Execute(_ context.Context, args map[string]interface{}) *Too
 			}
 		}
 
-		result := map[string]interface{}{
+		result := map[string]any{
 			"period":       "last 30 days",
 			"total_calls":  totalCalls,
 			"total_tokens": totalTokens,

@@ -27,20 +27,20 @@ func (t *ImageGenTool) Description() string {
 	return "Generate an image from a text description using DALL-E. Returns the image URL."
 }
 
-func (t *ImageGenTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *ImageGenTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"prompt": map[string]interface{}{
+		"properties": map[string]any{
+			"prompt": map[string]any{
 				"type":        "string",
 				"description": "Text description of the image to generate",
 			},
-			"size": map[string]interface{}{
+			"size": map[string]any{
 				"type":        "string",
 				"description": "Image size: 1024x1024, 1792x1024, or 1024x1792 (default: 1024x1024)",
 				"enum":        []string{"1024x1024", "1792x1024", "1024x1792"},
 			},
-			"quality": map[string]interface{}{
+			"quality": map[string]any{
 				"type":        "string",
 				"description": "Image quality: standard or hd (default: standard)",
 				"enum":        []string{"standard", "hd"},
@@ -50,7 +50,7 @@ func (t *ImageGenTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *ImageGenTool) Execute(ctx context.Context, args map[string]interface{}) *ToolResult {
+func (t *ImageGenTool) Execute(ctx context.Context, args map[string]any) *ToolResult {
 	prompt, _ := args["prompt"].(string)
 	if prompt == "" {
 		return ErrorResult("prompt is required")
@@ -66,7 +66,7 @@ func (t *ImageGenTool) Execute(ctx context.Context, args map[string]interface{})
 		quality = "standard"
 	}
 
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"model":   "dall-e-3",
 		"prompt":  prompt,
 		"n":       1,
@@ -79,7 +79,12 @@ func (t *ImageGenTool) Execute(ctx context.Context, args map[string]interface{})
 		return ErrorResult(fmt.Sprintf("failed to marshal request: %v", err))
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/images/generations", bytes.NewReader(bodyBytes))
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"POST",
+		"https://api.openai.com/v1/images/generations",
+		bytes.NewReader(bodyBytes),
+	)
 	if err != nil {
 		return ErrorResult(fmt.Sprintf("failed to create request: %v", err))
 	}

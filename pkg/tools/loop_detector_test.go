@@ -12,10 +12,10 @@ type loopTestTool struct {
 	result string
 }
 
-func (t *loopTestTool) Name() string                       { return t.name }
-func (t *loopTestTool) Description() string                { return "loop test tool" }
-func (t *loopTestTool) Parameters() map[string]interface{} { return nil }
-func (t *loopTestTool) Execute(_ context.Context, _ map[string]interface{}) *ToolResult {
+func (t *loopTestTool) Name() string               { return t.name }
+func (t *loopTestTool) Description() string        { return "loop test tool" }
+func (t *loopTestTool) Parameters() map[string]any { return nil }
+func (t *loopTestTool) Execute(_ context.Context, _ map[string]any) *ToolResult {
 	return NewToolResult(t.result)
 }
 
@@ -36,7 +36,7 @@ func TestWithSessionKey(t *testing.T) {
 // --- Hash tests ---
 
 func TestHashArgs_Deterministic(t *testing.T) {
-	args := map[string]interface{}{"path": "/tmp/file.txt", "content": "hello"}
+	args := map[string]any{"path": "/tmp/file.txt", "content": "hello"}
 	h1 := hashArgs(args)
 	h2 := hashArgs(args)
 	if h1 != h2 {
@@ -48,14 +48,14 @@ func TestHashArgs_Empty(t *testing.T) {
 	if got := hashArgs(nil); got != "empty" {
 		t.Errorf("expected 'empty' for nil args, got %q", got)
 	}
-	if got := hashArgs(map[string]interface{}{}); got != "empty" {
+	if got := hashArgs(map[string]any{}); got != "empty" {
 		t.Errorf("expected 'empty' for empty args, got %q", got)
 	}
 }
 
 func TestHashArgs_DifferentArgs(t *testing.T) {
-	h1 := hashArgs(map[string]interface{}{"a": "1"})
-	h2 := hashArgs(map[string]interface{}{"a": "2"})
+	h1 := hashArgs(map[string]any{"a": "1"})
+	h2 := hashArgs(map[string]any{"a": "2"})
 	if h1 == h2 {
 		t.Error("expected different hashes for different args")
 	}
@@ -107,7 +107,11 @@ func TestNewLoopDetector_FixesZeroThresholds(t *testing.T) {
 		t.Errorf("CriticalThreshold = %d, want %d", d.config.CriticalThreshold, DefaultCriticalThreshold)
 	}
 	if d.config.CircuitBreakerThreshold != DefaultCircuitBreakerThreshold {
-		t.Errorf("CircuitBreakerThreshold = %d, want %d", d.config.CircuitBreakerThreshold, DefaultCircuitBreakerThreshold)
+		t.Errorf(
+			"CircuitBreakerThreshold = %d, want %d",
+			d.config.CircuitBreakerThreshold,
+			DefaultCircuitBreakerThreshold,
+		)
 	}
 }
 
@@ -139,7 +143,7 @@ func TestLoopDetector_BelowWarning_NoBlock(t *testing.T) {
 		EnableGenericRepeat:     true,
 	})
 	ctx := WithSessionKey(context.Background(), "test")
-	args := map[string]interface{}{"key": "val"}
+	args := map[string]any{"key": "val"}
 
 	// Call 4 times (below warning=5): all should pass
 	for i := 0; i < 4; i++ {
@@ -157,7 +161,7 @@ func TestLoopDetector_AtWarning_NoBlock(t *testing.T) {
 		EnableGenericRepeat:     true,
 	})
 	ctx := WithSessionKey(context.Background(), "test")
-	args := map[string]interface{}{"key": "val"}
+	args := map[string]any{"key": "val"}
 
 	// Warning is informational — should NOT block
 	for i := 0; i < 5; i++ {
@@ -175,7 +179,7 @@ func TestLoopDetector_AtCritical_Blocks(t *testing.T) {
 		EnableGenericRepeat:     true,
 	})
 	ctx := WithSessionKey(context.Background(), "test")
-	args := map[string]interface{}{"key": "val"}
+	args := map[string]any{"key": "val"}
 
 	// First 6 calls should pass (history counts 0..5 before each check)
 	for i := 0; i < 6; i++ {
@@ -239,14 +243,14 @@ func TestLoopDetector_PingPong_Detected(t *testing.T) {
 		EnablePingPong:          true,
 	})
 	ctx := WithSessionKey(context.Background(), "test")
-	argsA := map[string]interface{}{"file": "a.txt"}
-	argsB := map[string]interface{}{"file": "b.txt"}
+	argsA := map[string]any{"file": "a.txt"}
+	argsB := map[string]any{"file": "b.txt"}
 
 	// Build alternation pattern: A, B, A, B, ...
 	// With result tracking for no-progress evidence
 	for i := 0; i < 20; i++ {
 		var tool string
-		var args map[string]interface{}
+		var args map[string]any
 		if i%2 == 0 {
 			tool = "read_file"
 			args = argsA
@@ -278,13 +282,13 @@ func TestLoopDetector_PingPong_WithProgress_NoBlock(t *testing.T) {
 		EnablePingPong:          true,
 	})
 	ctx := WithSessionKey(context.Background(), "test")
-	argsA := map[string]interface{}{"file": "a.txt"}
-	argsB := map[string]interface{}{"file": "b.txt"}
+	argsA := map[string]any{"file": "a.txt"}
+	argsB := map[string]any{"file": "b.txt"}
 
 	// Build alternation but with CHANGING results (progress)
 	for i := 0; i < 20; i++ {
 		var tool string
-		var args map[string]interface{}
+		var args map[string]any
 		if i%2 == 0 {
 			tool = "read_file"
 			args = argsA
@@ -334,7 +338,7 @@ func TestLoopDetector_CircuitBreaker_NoProgress(t *testing.T) {
 		EnablePingPong:          false,
 	})
 	ctx := WithSessionKey(context.Background(), "test")
-	args := map[string]interface{}{"file": "/tmp/stuck"}
+	args := map[string]any{"file": "/tmp/stuck"}
 
 	for i := 0; i < threshold+5; i++ {
 		err := d.BeforeExecute(ctx, "read_file", args)
@@ -488,7 +492,7 @@ func TestLoopDetector_IntegrationWithRegistry(t *testing.T) {
 func TestLoopDetector_AfterExecute_RecordsResult(t *testing.T) {
 	d := NewLoopDetector(DefaultLoopDetectorConfig())
 	ctx := WithSessionKey(context.Background(), "after-test")
-	args := map[string]interface{}{"x": "1"}
+	args := map[string]any{"x": "1"}
 
 	d.BeforeExecute(ctx, "test_tool", args)
 	d.AfterExecute(ctx, "test_tool", args, &ToolResult{ForLLM: "result"})

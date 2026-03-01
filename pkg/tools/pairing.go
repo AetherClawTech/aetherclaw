@@ -25,24 +25,24 @@ func (t *PairingTool) Description() string {
 	return "Manage device pairing: approve or reject unknown senders, list pending/approved devices, revoke access."
 }
 
-func (t *PairingTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *PairingTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"action": map[string]interface{}{
+		"properties": map[string]any{
+			"action": map[string]any{
 				"type":        "string",
 				"description": "Action: 'list_pending', 'list_approved', 'approve', 'reject', 'revoke'",
 				"enum":        []string{"list_pending", "list_approved", "approve", "reject", "revoke"},
 			},
-			"code": map[string]interface{}{
+			"code": map[string]any{
 				"type":        "string",
 				"description": "Pairing code (for approve/reject actions)",
 			},
-			"channel": map[string]interface{}{
+			"channel": map[string]any{
 				"type":        "string",
 				"description": "Channel name (for revoke action)",
 			},
-			"sender_id": map[string]interface{}{
+			"sender_id": map[string]any{
 				"type":        "string",
 				"description": "Sender ID (for revoke action)",
 			},
@@ -51,7 +51,7 @@ func (t *PairingTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *PairingTool) Execute(_ context.Context, args map[string]interface{}) *ToolResult {
+func (t *PairingTool) Execute(_ context.Context, args map[string]any) *ToolResult {
 	action, _ := args["action"].(string)
 
 	switch action {

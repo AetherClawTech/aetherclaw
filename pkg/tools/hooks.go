@@ -12,6 +12,6 @@ import "context"
 // Multiple hooks are executed in registration order. If any BeforeExecute returns
 // an error, subsequent hooks and the tool itself are skipped.
 type ToolHook interface {
-	BeforeExecute(ctx context.Context, toolName string, args map[string]interface{}) error
-	AfterExecute(ctx context.Context, toolName string, args map[string]interface{}, result *ToolResult)
+	BeforeExecute(ctx context.Context, toolName string, args map[string]any) error
+	AfterExecute(ctx context.Context, toolName string, args map[string]any, result *ToolResult)
 }

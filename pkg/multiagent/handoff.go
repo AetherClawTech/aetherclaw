@@ -82,7 +82,13 @@ type HandoffResult struct {
 
 // ExecuteHandoff delegates a task to a target agent, injecting blackboard context.
 // It enforces recursion guards: depth limit and cycle detection.
-func ExecuteHandoff(ctx context.Context, resolver AgentResolver, board *Blackboard, req HandoffRequest, channel, chatID string) *HandoffResult {
+func ExecuteHandoff(
+	ctx context.Context,
+	resolver AgentResolver,
+	board *Blackboard,
+	req HandoffRequest,
+	channel, chatID string,
+) *HandoffResult {
 	// Recursion guard: depth limit
 	maxDepth := req.MaxDepth
 	if maxDepth == 0 {
@@ -92,7 +98,13 @@ func ExecuteHandoff(ctx context.Context, resolver AgentResolver, board *Blackboa
 		return &HandoffResult{
 			AgentID: req.ToAgentID,
 			Success: false,
-			Error:   fmt.Sprintf("handoff depth limit reached (%d/%d): %v -> %s", req.Depth, maxDepth, req.Visited, req.ToAgentID),
+			Error: fmt.Sprintf(
+				"handoff depth limit reached (%d/%d): %v -> %s",
+				req.Depth,
+				maxDepth,
+				req.Visited,
+				req.ToAgentID,
+			),
 		}
 	}
 
@@ -176,7 +188,6 @@ func ExecuteHandoff(ctx context.Context, resolver AgentResolver, board *Blackboa
 			"temperature": 0.7,
 		},
 	}, messages, channel, chatID)
-
 	if err != nil {
 		return &HandoffResult{
 			AgentID: req.ToAgentID,

@@ -25,23 +25,23 @@ func (t *TTSTool) Description() string {
 	return "Convert text to speech audio. Generates an audio file that can be sent via messaging channels. Supports multiple voices."
 }
 
-func (t *TTSTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *TTSTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"text": map[string]interface{}{
+		"properties": map[string]any{
+			"text": map[string]any{
 				"type":        "string",
 				"description": "Text to convert to speech",
 			},
-			"voice": map[string]interface{}{
+			"voice": map[string]any{
 				"type":        "string",
 				"description": "Voice to use (e.g., 'alloy', 'echo', 'nova' for OpenAI; voice ID for ElevenLabs)",
 			},
-			"speed": map[string]interface{}{
+			"speed": map[string]any{
 				"type":        "number",
 				"description": "Speech speed (0.25-4.0, default 1.0)",
 			},
-			"action": map[string]interface{}{
+			"action": map[string]any{
 				"type":        "string",
 				"description": "Action: 'speak' to generate audio, 'voices' to list available voices",
 				"enum":        []string{"speak", "voices"},
@@ -51,7 +51,7 @@ func (t *TTSTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *TTSTool) Execute(ctx context.Context, args map[string]interface{}) *ToolResult {
+func (t *TTSTool) Execute(ctx context.Context, args map[string]any) *ToolResult {
 	action, _ := args["action"].(string)
 	if action == "" {
 		action = "speak"
@@ -86,7 +86,7 @@ func (t *TTSTool) Execute(ctx context.Context, args map[string]interface{}) *Too
 		return ErrorResult(fmt.Sprintf("TTS failed: %v", err))
 	}
 
-	output := map[string]interface{}{
+	output := map[string]any{
 		"file_path": result.FilePath,
 		"format":    result.Format,
 		"size":      result.Size,

@@ -526,7 +526,10 @@ func (c *OpenClawConfig) ConvertToAetherClaw(sourceHome string) (*AetherClawConf
 		)
 	}
 	if c.HasMemory() {
-		warnings = append(warnings, "Memory backend config not migrated - AetherClaw uses SQLite with vector embeddings")
+		warnings = append(
+			warnings,
+			"Memory backend config not migrated - AetherClaw uses SQLite with vector embeddings",
+		)
 	}
 	if c.HasCron() {
 		warnings = append(

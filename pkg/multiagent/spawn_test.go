@@ -21,7 +21,7 @@ func (r *mockAgentResolver) GetAgentInfo(id string) *AgentInfo {
 }
 
 func (r *mockAgentResolver) ListAgents() []AgentInfo {
-	var list []AgentInfo
+	list := make([]AgentInfo, 0, len(r.agents))
 	for _, a := range r.agents {
 		list = append(list, *a)
 	}
@@ -34,7 +34,13 @@ type mockLLMProvider struct {
 	delay    time.Duration
 }
 
-func (m *mockLLMProvider) Chat(ctx context.Context, messages []providers.Message, t []providers.ToolDefinition, model string, opts map[string]interface{}) (*providers.LLMResponse, error) {
+func (m *mockLLMProvider) Chat(
+	ctx context.Context,
+	messages []providers.Message,
+	t []providers.ToolDefinition,
+	model string,
+	opts map[string]any,
+) (*providers.LLMResponse, error) {
 	if m.delay > 0 {
 		select {
 		case <-ctx.Done():

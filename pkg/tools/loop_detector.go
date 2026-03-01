@@ -29,9 +29,9 @@ func sessionKeyFromContext(ctx context.Context) string {
 
 // Default thresholds matching OpenClaw's production values.
 const (
-	DefaultHistorySize            = 30
-	DefaultWarningThreshold       = 10
-	DefaultCriticalThreshold      = 20
+	DefaultHistorySize             = 30
+	DefaultWarningThreshold        = 10
+	DefaultCriticalThreshold       = 20
 	DefaultCircuitBreakerThreshold = 30
 )
 
@@ -115,7 +115,7 @@ func (d *LoopDetector) getSession(key string) *sessionState {
 
 // BeforeExecute checks for loops before tool execution.
 // Returns an error to block execution if a critical loop is detected.
-func (d *LoopDetector) BeforeExecute(ctx context.Context, toolName string, args map[string]interface{}) error {
+func (d *LoopDetector) BeforeExecute(ctx context.Context, toolName string, args map[string]any) error {
 	sessionKey := sessionKeyFromContext(ctx)
 	state := d.getSession(sessionKey)
 	argsHash := hashArgs(args)
@@ -139,7 +139,7 @@ func (d *LoopDetector) BeforeExecute(ctx context.Context, toolName string, args 
 
 	if verdict.Blocked {
 		logger.WarnCF("loop_detector", "Loop blocked",
-			map[string]interface{}{
+			map[string]any{
 				"tool":    toolName,
 				"reason":  verdict.Reason,
 				"count":   verdict.Count,
@@ -150,7 +150,7 @@ func (d *LoopDetector) BeforeExecute(ctx context.Context, toolName string, args 
 
 	if verdict.Warning {
 		logger.WarnCF("loop_detector", "Loop warning",
-			map[string]interface{}{
+			map[string]any{
 				"tool":    toolName,
 				"reason":  verdict.Reason,
 				"count":   verdict.Count,
@@ -162,7 +162,7 @@ func (d *LoopDetector) BeforeExecute(ctx context.Context, toolName string, args 
 }
 
 // AfterExecute records the tool result hash for no-progress detection.
-func (d *LoopDetector) AfterExecute(ctx context.Context, toolName string, args map[string]interface{}, result *ToolResult) {
+func (d *LoopDetector) AfterExecute(ctx context.Context, toolName string, args map[string]any, result *ToolResult) {
 	sessionKey := sessionKeyFromContext(ctx)
 	state := d.getSession(sessionKey)
 	argsHash := hashArgs(args)
@@ -351,7 +351,7 @@ func (d *LoopDetector) hasPingPongNoProgress(state *sessionState, streak int) bo
 
 // hashArgs produces a deterministic hash of tool arguments.
 // Go's json.Marshal sorts map keys alphabetically, ensuring stability.
-func hashArgs(args map[string]interface{}) string {
+func hashArgs(args map[string]any) string {
 	if len(args) == 0 {
 		return "empty"
 	}

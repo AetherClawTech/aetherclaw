@@ -66,18 +66,18 @@ func (a *Announcer) Deliver(targetSessionKey string, ann *Announcement) {
 
 	select {
 	case ch <- ann:
-		logger.DebugCF("announce", "Announcement delivered", map[string]interface{}{
-			"from":    ann.FromSessionKey,
-			"to":      targetSessionKey,
-			"run_id":  ann.RunID,
-			"agent":   ann.AgentID,
-			"mode":    string(ann.Mode),
+		logger.DebugCF("announce", "Announcement delivered", map[string]any{
+			"from":   ann.FromSessionKey,
+			"to":     targetSessionKey,
+			"run_id": ann.RunID,
+			"agent":  ann.AgentID,
+			"mode":   string(ann.Mode),
 		})
 	default:
 		// Channel full — drop oldest to make room (back-pressure).
 		select {
 		case <-ch:
-			logger.WarnCF("announce", "Dropped oldest announcement (buffer full)", map[string]interface{}{
+			logger.WarnCF("announce", "Dropped oldest announcement (buffer full)", map[string]any{
 				"session": targetSessionKey,
 			})
 		default:
@@ -86,7 +86,7 @@ func (a *Announcer) Deliver(targetSessionKey string, ann *Announcement) {
 		select {
 		case ch <- ann:
 		default:
-			logger.WarnCF("announce", "Failed to deliver announcement", map[string]interface{}{
+			logger.WarnCF("announce", "Failed to deliver announcement", map[string]any{
 				"session": targetSessionKey,
 				"run_id":  ann.RunID,
 			})

@@ -28,7 +28,12 @@ type SpawnTool struct {
 }
 
 // NewSpawnTool creates a spawn tool bound to a source agent.
-func NewSpawnTool(resolver AgentResolver, board *Blackboard, spawnManager *SpawnManager, fromAgentID string) *SpawnTool {
+func NewSpawnTool(
+	resolver AgentResolver,
+	board *Blackboard,
+	spawnManager *SpawnManager,
+	fromAgentID string,
+) *SpawnTool {
 	return &SpawnTool{
 		resolver:      resolver,
 		board:         board,
@@ -48,7 +53,9 @@ func (t *SpawnTool) Description() string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("Spawn a child agent asynchronously. Returns immediately with a run ID — the result will auto-announce back when complete. Available agents:\n")
+	sb.WriteString(
+		"Spawn a child agent asynchronously. Returns immediately with a run ID — the result will auto-announce back when complete. Available agents:\n",
+	)
 	for _, a := range agents {
 		if a.ID == t.fromAgentID {
 			continue
@@ -168,7 +175,11 @@ func (t *SpawnTool) Execute(ctx context.Context, args map[string]any) *tools.Too
 	}
 
 	return &tools.ToolResult{
-		ForLLM:  fmt.Sprintf("Agent %q spawned (run_id: %s). It runs asynchronously — the result will auto-announce back when complete. Continue with other work.", agentID, result.RunID),
+		ForLLM: fmt.Sprintf(
+			"Agent %q spawned (run_id: %s). It runs asynchronously — the result will auto-announce back when complete. Continue with other work.",
+			agentID,
+			result.RunID,
+		),
 		ForUser: fmt.Sprintf("Spawned agent %q (run: %s)", agentID, result.RunID),
 	}
 }

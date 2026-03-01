@@ -20,8 +20,8 @@ import (
 type Chunk struct {
 	ID        string    `json:"id"`
 	Content   string    `json:"content"`
-	Source    string    `json:"source,omitempty"`    // where this memory came from
-	Tags     []string  `json:"tags,omitempty"`
+	Source    string    `json:"source,omitempty"` // where this memory came from
+	Tags      []string  `json:"tags,omitempty"`
 	Embedding []float64 `json:"embedding,omitempty"` // vector embedding
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -29,9 +29,9 @@ type Chunk struct {
 
 // SearchResult holds a search result with relevance score.
 type SearchResult struct {
-	Chunk    *Chunk  `json:"chunk"`
-	Score    float64 `json:"score"`
-	Method   string  `json:"method"` // "keyword", "vector", "hybrid"
+	Chunk  *Chunk  `json:"chunk"`
+	Score  float64 `json:"score"`
+	Method string  `json:"method"` // "keyword", "vector", "hybrid"
 }
 
 // EmbeddingProvider generates vector embeddings for text.
@@ -50,7 +50,7 @@ type Index struct {
 
 // NewIndex creates a memory index at the given directory.
 func NewIndex(dir string, embedding EmbeddingProvider) *Index {
-	os.MkdirAll(dir, 0755)
+	os.MkdirAll(dir, 0o755)
 
 	idx := &Index{
 		dir:       dir,
@@ -74,7 +74,7 @@ func (idx *Index) Store(ctx context.Context, content, source string, tags []stri
 		ID:        id,
 		Content:   content,
 		Source:    source,
-		Tags:     tags,
+		Tags:      tags,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -240,7 +240,7 @@ func (idx *Index) saveLocked() {
 
 	path := filepath.Join(idx.dir, "index.json")
 	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
 		return
 	}
 	os.Rename(tmpPath, path)
@@ -354,7 +354,7 @@ func NewOpenAIEmbedding(apiKey string) *OpenAIEmbedding {
 func (e *OpenAIEmbedding) Name() string { return "openai" }
 
 func (e *OpenAIEmbedding) Embed(ctx context.Context, text string) ([]float64, error) {
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"model": e.model,
 		"input": text,
 	}
@@ -364,7 +364,12 @@ func (e *OpenAIEmbedding) Embed(ctx context.Context, text string) ([]float64, er
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/embeddings", bytes.NewReader(bodyBytes))
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"POST",
+		"https://api.openai.com/v1/embeddings",
+		bytes.NewReader(bodyBytes),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -415,9 +420,9 @@ func NewGeminiEmbedding(apiKey string) *GeminiEmbedding {
 func (e *GeminiEmbedding) Name() string { return "gemini" }
 
 func (e *GeminiEmbedding) Embed(ctx context.Context, text string) ([]float64, error) {
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"model": "models/embedding-001",
-		"content": map[string]interface{}{
+		"content": map[string]any{
 			"parts": []map[string]string{
 				{"text": text},
 			},
@@ -429,7 +434,10 @@ func (e *GeminiEmbedding) Embed(ctx context.Context, text string) ([]float64, er
 		return nil, err
 	}
 
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=%s", e.apiKey)
+	url := fmt.Sprintf(
+		"https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=%s",
+		e.apiKey,
+	)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, err

@@ -37,7 +37,7 @@ func TestSessionsListTool_Empty(t *testing.T) {
 	deps, _, _ := newTestSessionDeps(t)
 	tool := tools.NewSessionsListTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id": "main",
 	})
 
@@ -45,7 +45,7 @@ func TestSessionsListTool_Empty(t *testing.T) {
 		t.Fatalf("expected success, got error: %s", result.ForLLM)
 	}
 
-	var sessions []map[string]interface{}
+	var sessions []map[string]any
 	if err := json.Unmarshal([]byte(result.ForLLM), &sessions); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestSessionsListTool_WithSessions(t *testing.T) {
 
 	tool := tools.NewSessionsListTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id": "main",
 	})
 
@@ -70,7 +70,7 @@ func TestSessionsListTool_WithSessions(t *testing.T) {
 		t.Fatalf("expected success, got error: %s", result.ForLLM)
 	}
 
-	var sessions []map[string]interface{}
+	var sessions []map[string]any
 	if err := json.Unmarshal([]byte(result.ForLLM), &sessions); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestSessionsListTool_MissingAgentID(t *testing.T) {
 	deps, _, _ := newTestSessionDeps(t)
 	tool := tools.NewSessionsListTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{})
+	result := tool.Execute(context.Background(), map[string]any{})
 
 	if !result.IsError {
 		t.Fatal("expected error for missing agent_id")
@@ -96,7 +96,7 @@ func TestSessionsListTool_AccessDenied(t *testing.T) {
 
 	tool := tools.NewSessionsListTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id": "other",
 	})
 
@@ -116,7 +116,7 @@ func TestSessionsListTool_Limit(t *testing.T) {
 
 	tool := tools.NewSessionsListTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id": "main",
 		"limit":    float64(3),
 	})
@@ -125,7 +125,7 @@ func TestSessionsListTool_Limit(t *testing.T) {
 		t.Fatalf("expected success, got error: %s", result.ForLLM)
 	}
 
-	var sessions []map[string]interface{}
+	var sessions []map[string]any
 	json.Unmarshal([]byte(result.ForLLM), &sessions)
 	if len(sessions) > 3 {
 		t.Errorf("expected <= 3 sessions, got %d", len(sessions))
@@ -139,7 +139,7 @@ func TestSessionsHistoryTool_Success(t *testing.T) {
 
 	tool := tools.NewSessionsHistoryTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id":    "main",
 		"session_key": "test-session",
 	})
@@ -169,7 +169,7 @@ func TestSessionsHistoryTool_FiltersToolMessages(t *testing.T) {
 
 	tool := tools.NewSessionsHistoryTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id":    "main",
 		"session_key": "test-session",
 	})
@@ -190,7 +190,7 @@ func TestSessionsHistoryTool_MissingParams(t *testing.T) {
 	deps, _, _ := newTestSessionDeps(t)
 	tool := tools.NewSessionsHistoryTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id": "main",
 	})
 
@@ -204,7 +204,7 @@ func TestSessionsSendTool_Success(t *testing.T) {
 	tool := tools.NewSessionsSendTool(deps, "main")
 	tool.SetContext("telegram", "123")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id": "worker",
 		"message":  "do this task",
 	})
@@ -231,7 +231,7 @@ func TestSessionsSendTool_MissingParams(t *testing.T) {
 	deps, _, _ := newTestSessionDeps(t)
 	tool := tools.NewSessionsSendTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id": "worker",
 	})
 
@@ -246,7 +246,7 @@ func TestSessionsSendTool_AccessDenied(t *testing.T) {
 
 	tool := tools.NewSessionsSendTool(deps, "main")
 
-	result := tool.Execute(context.Background(), map[string]interface{}{
+	result := tool.Execute(context.Background(), map[string]any{
 		"agent_id": "worker",
 		"message":  "test",
 	})

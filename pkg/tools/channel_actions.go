@@ -7,7 +7,7 @@ import (
 )
 
 // ChannelActionCallback is called when a channel action is requested.
-type ChannelActionCallback func(channel, chatID, action string, params map[string]interface{}) error
+type ChannelActionCallback func(channel, chatID, action string, params map[string]any) error
 
 // ChannelActionsTool provides channel-specific actions (pin, delete, react, etc.).
 type ChannelActionsTool struct {
@@ -34,36 +34,36 @@ func (t *ChannelActionsTool) SetCallback(cb ChannelActionCallback) {
 	t.callback = cb
 }
 
-func (t *ChannelActionsTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *ChannelActionsTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"action": map[string]interface{}{
+		"properties": map[string]any{
+			"action": map[string]any{
 				"type":        "string",
 				"description": "Action to perform",
 				"enum":        []string{"pin", "unpin", "delete", "react", "unreact", "forward", "edit"},
 			},
-			"message_id": map[string]interface{}{
+			"message_id": map[string]any{
 				"type":        "string",
 				"description": "Message ID to act on",
 			},
-			"channel": map[string]interface{}{
+			"channel": map[string]any{
 				"type":        "string",
 				"description": "Target channel (defaults to current channel)",
 			},
-			"chat_id": map[string]interface{}{
+			"chat_id": map[string]any{
 				"type":        "string",
 				"description": "Target chat ID (defaults to current chat)",
 			},
-			"emoji": map[string]interface{}{
+			"emoji": map[string]any{
 				"type":        "string",
 				"description": "Emoji for react/unreact actions",
 			},
-			"text": map[string]interface{}{
+			"text": map[string]any{
 				"type":        "string",
 				"description": "New text for edit action",
 			},
-			"target_chat_id": map[string]interface{}{
+			"target_chat_id": map[string]any{
 				"type":        "string",
 				"description": "Target chat for forward action",
 			},
@@ -72,7 +72,7 @@ func (t *ChannelActionsTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *ChannelActionsTool) Execute(_ context.Context, args map[string]interface{}) *ToolResult {
+func (t *ChannelActionsTool) Execute(_ context.Context, args map[string]any) *ToolResult {
 	action, _ := args["action"].(string)
 	messageID, _ := args["message_id"].(string)
 	if action == "" || messageID == "" {
@@ -96,7 +96,7 @@ func (t *ChannelActionsTool) Execute(_ context.Context, args map[string]interfac
 		return ErrorResult("channel actions not configured (no callback)")
 	}
 
-	params := map[string]interface{}{
+	params := map[string]any{
 		"message_id": messageID,
 	}
 	if emoji, ok := args["emoji"].(string); ok {
@@ -114,7 +114,7 @@ func (t *ChannelActionsTool) Execute(_ context.Context, args map[string]interfac
 		return ErrorResult(fmt.Sprintf("channel action '%s' failed: %v", action, err))
 	}
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"action":     action,
 		"message_id": messageID,
 		"channel":    channel,

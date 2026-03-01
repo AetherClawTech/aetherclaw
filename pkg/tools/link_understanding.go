@@ -168,7 +168,7 @@ func EnrichMessageWithLinks(content string, maxPerLink int) string {
 		lc := FetchLinkContent(url, maxPerLink)
 		if lc.Error != "" {
 			logger.DebugCF("link", "Failed to fetch link content",
-				map[string]interface{}{"url": url, "error": lc.Error})
+				map[string]any{"url": url, "error": lc.Error})
 			continue
 		}
 		if lc.Content == "" {
