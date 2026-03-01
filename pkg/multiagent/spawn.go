@@ -13,19 +13,19 @@ import (
 // MaxChildrenPerAgent follows NVIDIA's stream scheduling pattern:
 // limit parallel work to prevent resource exhaustion while maximizing throughput.
 const (
-	DefaultMaxChildren   = 5
-	DefaultSpawnTimeout  = 5 * time.Minute
+	DefaultMaxChildren  = 5
+	DefaultSpawnTimeout = 5 * time.Minute
 )
 
 // SpawnRequest describes an async agent invocation.
 type SpawnRequest struct {
-	FromAgentID string
-	ToAgentID   string
-	Task        string
-	Context     map[string]string // k-v to write to blackboard
-	Depth       int
-	Visited     []string
-	MaxDepth    int
+	FromAgentID  string
+	ToAgentID    string
+	Task         string
+	Context      map[string]string // k-v to write to blackboard
+	Depth        int
+	Visited      []string
+	MaxDepth     int
 	ParentRunKey string
 }
 
@@ -67,8 +67,8 @@ type semaphore struct {
 	ch chan struct{}
 }
 
-func newSemaphore(max int) *semaphore {
-	return &semaphore{ch: make(chan struct{}, max)}
+func newSemaphore(maxExecutions int) *semaphore {
+	return &semaphore{ch: make(chan struct{}, maxExecutions)}
 }
 
 func (s *semaphore) acquire() bool {
@@ -89,7 +89,12 @@ func (s *semaphore) count() int {
 }
 
 // NewSpawnManager creates a spawn manager with the given limits.
-func NewSpawnManager(registry *RunRegistry, announcer *Announcer, maxChildren int, timeout time.Duration) *SpawnManager {
+func NewSpawnManager(
+	registry *RunRegistry,
+	announcer *Announcer,
+	maxChildren int,
+	timeout time.Duration,
+) *SpawnManager {
 	if maxChildren <= 0 {
 		maxChildren = DefaultMaxChildren
 	}
@@ -116,7 +121,13 @@ func (sm *SpawnManager) AsyncSpawn(
 ) *SpawnResult {
 	// Generate unique run ID and session key.
 	runID := fmt.Sprintf("spawn:%s:%s:%d", req.FromAgentID, req.ToAgentID, time.Now().UnixNano())
-	childSessionKey := fmt.Sprintf("spawn:%s:%s:%d:%d", req.FromAgentID, req.ToAgentID, req.Depth, time.Now().UnixNano())
+	childSessionKey := fmt.Sprintf(
+		"spawn:%s:%s:%d:%d",
+		req.FromAgentID,
+		req.ToAgentID,
+		req.Depth,
+		time.Now().UnixNano(),
+	)
 
 	// Acquire per-parent semaphore (NVIDIA stream scheduling pattern).
 	sem := sm.getOrCreateSemaphore(req.ParentRunKey)
@@ -125,7 +136,11 @@ func (sm *SpawnManager) AsyncSpawn(
 			RunID:      runID,
 			SessionKey: childSessionKey,
 			Status:     "rejected",
-			Error:      fmt.Sprintf("max concurrent children reached (%d/%d) for parent session", sem.count(), sm.maxChildren),
+			Error: fmt.Sprintf(
+				"max concurrent children reached (%d/%d) for parent session",
+				sem.count(),
+				sm.maxChildren,
+			),
 		}
 	}
 
@@ -142,15 +157,15 @@ func (sm *SpawnManager) AsyncSpawn(
 		StartedAt:  time.Now(),
 	})
 
-	logger.InfoCF("spawn", "Async spawn started", map[string]interface{}{
-		"run_id":    runID,
-		"from":      req.FromAgentID,
-		"to":        req.ToAgentID,
-		"depth":     req.Depth,
-		"parent":    req.ParentRunKey,
-		"timeout":   sm.timeout.String(),
-		"active":    sem.count(),
-		"max":       sm.maxChildren,
+	logger.InfoCF("spawn", "Async spawn started", map[string]any{
+		"run_id":  runID,
+		"from":    req.FromAgentID,
+		"to":      req.ToAgentID,
+		"depth":   req.Depth,
+		"parent":  req.ParentRunKey,
+		"timeout": sm.timeout.String(),
+		"active":  sem.count(),
+		"max":     sm.maxChildren,
 	})
 
 	// Fire-and-forget goroutine (Google MapReduce worker pattern).
@@ -196,7 +211,7 @@ func (sm *SpawnManager) AsyncSpawn(
 			})
 		}
 
-		logger.InfoCF("spawn", "Async spawn completed", map[string]interface{}{
+		logger.InfoCF("spawn", "Async spawn completed", map[string]any{
 			"run_id":     runID,
 			"agent_id":   req.ToAgentID,
 			"success":    result.Success,

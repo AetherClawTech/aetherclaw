@@ -158,7 +158,7 @@ func (t *HandoffTool) Execute(ctx context.Context, args map[string]any) *tools.T
 	}
 
 	// Create cancellable context for cascade stop support.
-	// If the parent context is cancelled, this handoff is also cancelled.
+	// If the parent context is canceled, this handoff is also canceled.
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -191,7 +191,12 @@ func (t *HandoffTool) Execute(ctx context.Context, args map[string]any) *tools.T
 	}
 
 	return &tools.ToolResult{
-		ForLLM:  fmt.Sprintf("Agent %q completed task (iterations: %d):\n%s", agentID, result.Iterations, result.Content),
+		ForLLM: fmt.Sprintf(
+			"Agent %q completed task (iterations: %d):\n%s",
+			agentID,
+			result.Iterations,
+			result.Content,
+		),
 		ForUser: result.Content,
 	}
 }

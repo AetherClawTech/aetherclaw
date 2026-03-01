@@ -28,10 +28,10 @@ type SynthesizeOptions struct {
 
 // AudioResult holds the synthesized audio.
 type AudioResult struct {
-	FilePath string // path to the saved audio file
-	Format   string // audio format
+	FilePath string  // path to the saved audio file
+	Format   string  // audio format
 	Duration float64 // duration in seconds (estimated)
-	Size     int64  // file size in bytes
+	Size     int64   // file size in bytes
 }
 
 // OpenAITTS implements TTS via OpenAI's API.
@@ -70,7 +70,7 @@ func (t *OpenAITTS) Synthesize(ctx context.Context, text string, opts Synthesize
 		format = "mp3"
 	}
 
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"model":           t.model,
 		"input":           text,
 		"voice":           voice,
@@ -83,7 +83,12 @@ func (t *OpenAITTS) Synthesize(ctx context.Context, text string, opts Synthesize
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/audio/speech", bytes.NewReader(bodyBytes))
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"POST",
+		"https://api.openai.com/v1/audio/speech",
+		bytes.NewReader(bodyBytes),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -145,10 +150,10 @@ func (t *ElevenLabsTTS) Synthesize(ctx context.Context, text string, opts Synthe
 		voiceID = "21m00Tcm4TlvDq8ikWAM" // Rachel (default)
 	}
 
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"text":     text,
 		"model_id": "eleven_monolingual_v1",
-		"voice_settings": map[string]interface{}{
+		"voice_settings": map[string]any{
 			"stability":        0.5,
 			"similarity_boost": 0.75,
 		},
@@ -165,7 +170,7 @@ func (t *ElevenLabsTTS) Synthesize(ctx context.Context, text string, opts Synthe
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("xi-api-key", t.apiKey)
+	req.Header.Set("Xi-Api-Key", t.apiKey)
 	req.Header.Set("Accept", "audio/mpeg")
 
 	client := &http.Client{Timeout: 60 * time.Second}
@@ -215,7 +220,7 @@ func NewManager(outputDir string, providers ...Provider) *Manager {
 		}
 	}
 
-	os.MkdirAll(outputDir, 0755)
+	os.MkdirAll(outputDir, 0o755)
 
 	return &Manager{
 		providers: available,
@@ -274,8 +279,18 @@ func (m *Manager) Synthesize(ctx context.Context, text string, opts SynthesizeOp
 // ListVoices returns available voices for each provider.
 func (m *Manager) ListVoices() map[string][]string {
 	voices := map[string][]string{
-		"openai":     {"alloy", "echo", "fable", "onyx", "nova", "shimmer"},
-		"elevenlabs": {"Rachel (21m00Tcm4TlvDq8ikWAM)", "Domi", "Bella", "Antoni", "Elli", "Josh", "Arnold", "Adam", "Sam"},
+		"openai": {"alloy", "echo", "fable", "onyx", "nova", "shimmer"},
+		"elevenlabs": {
+			"Rachel (21m00Tcm4TlvDq8ikWAM)",
+			"Domi",
+			"Bella",
+			"Antoni",
+			"Elli",
+			"Josh",
+			"Arnold",
+			"Adam",
+			"Sam",
+		},
 	}
 	return voices
 }

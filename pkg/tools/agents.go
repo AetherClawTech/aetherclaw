@@ -37,14 +37,14 @@ func (t *AgentsListTool) Description() string {
 	return "List all available agents with their configuration (ID, model, provider, status)."
 }
 
-func (t *AgentsListTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *AgentsListTool) Parameters() map[string]any {
+	return map[string]any{
 		"type":       "object",
-		"properties": map[string]interface{}{},
+		"properties": map[string]any{},
 	}
 }
 
-func (t *AgentsListTool) Execute(_ context.Context, _ map[string]interface{}) *ToolResult {
+func (t *AgentsListTool) Execute(_ context.Context, _ map[string]any) *ToolResult {
 	ids := t.deps.ListAgentIDs()
 	if len(ids) == 0 {
 		return SilentResult("[]")

@@ -16,7 +16,13 @@ type mockProvider struct {
 	err      error
 }
 
-func (m *mockProvider) Chat(_ context.Context, _ []providers.Message, _ []providers.ToolDefinition, _ string, _ map[string]any) (*providers.LLMResponse, error) {
+func (m *mockProvider) Chat(
+	_ context.Context,
+	_ []providers.Message,
+	_ []providers.ToolDefinition,
+	_ string,
+	_ map[string]any,
+) (*providers.LLMResponse, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -134,8 +140,23 @@ func TestExecuteHandoff_NilBlackboard(t *testing.T) {
 func TestHandoffTool_Execute(t *testing.T) {
 	provider := &mockProvider{response: "handoff result"}
 	resolver := newMockResolver(
-		&AgentInfo{ID: "main", Name: "Main", Role: "orchestrator", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
-		&AgentInfo{ID: "coder", Name: "Coder", Role: "coding", Model: "test", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
+		&AgentInfo{
+			ID:       "main",
+			Name:     "Main",
+			Role:     "orchestrator",
+			Provider: provider,
+			Tools:    tools.NewToolRegistry(),
+			MaxIter:  5,
+		},
+		&AgentInfo{
+			ID:       "coder",
+			Name:     "Coder",
+			Role:     "coding",
+			Model:    "test",
+			Provider: provider,
+			Tools:    tools.NewToolRegistry(),
+			MaxIter:  5,
+		},
 	)
 
 	bb := NewBlackboard()
@@ -211,7 +232,14 @@ func TestHandoffTool_ExecuteByCapability(t *testing.T) {
 	provider := &mockProvider{response: "capability result"}
 	resolver := newMockResolver(
 		&AgentInfo{ID: "main", Name: "Main", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
-		&AgentInfo{ID: "coder", Name: "Coder", Capabilities: []string{"coding"}, Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
+		&AgentInfo{
+			ID:           "coder",
+			Name:         "Coder",
+			Capabilities: []string{"coding"},
+			Provider:     provider,
+			Tools:        tools.NewToolRegistry(),
+			MaxIter:      5,
+		},
 	)
 	bb := NewBlackboard()
 	tool := NewHandoffTool(resolver, bb, "main")
@@ -369,23 +397,6 @@ func TestFindAgentsByCapability_Empty(t *testing.T) {
 	}
 }
 
-func TestAgentInfo_Capabilities(t *testing.T) {
-	agent := &AgentInfo{
-		ID:           "coder",
-		Name:         "Code Agent",
-		Capabilities: []string{"coding", "review", "testing"},
-	}
-	if len(agent.Capabilities) != 3 {
-		t.Errorf("Capabilities len = %d, want 3", len(agent.Capabilities))
-	}
-
-	// Nil capabilities should not panic
-	agent2 := &AgentInfo{ID: "basic"}
-	if agent2.Capabilities != nil {
-		t.Error("expected nil Capabilities for unset agent")
-	}
-}
-
 func TestExecuteHandoff_DepthLimit(t *testing.T) {
 	provider := &mockProvider{response: "done"}
 	resolver := newMockResolver(&AgentInfo{
@@ -418,8 +429,22 @@ func TestExecuteHandoff_DepthLimit(t *testing.T) {
 func TestExecuteHandoff_CycleDetection(t *testing.T) {
 	provider := &mockProvider{response: "done"}
 	resolver := newMockResolver(
-		&AgentInfo{ID: "main", Name: "Main", Model: "test", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
-		&AgentInfo{ID: "coder", Name: "Coder", Model: "test", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
+		&AgentInfo{
+			ID:       "main",
+			Name:     "Main",
+			Model:    "test",
+			Provider: provider,
+			Tools:    tools.NewToolRegistry(),
+			MaxIter:  5,
+		},
+		&AgentInfo{
+			ID:       "coder",
+			Name:     "Coder",
+			Model:    "test",
+			Provider: provider,
+			Tools:    tools.NewToolRegistry(),
+			MaxIter:  5,
+		},
 	)
 
 	bb := NewBlackboard()
@@ -517,7 +542,14 @@ func TestHandoffTool_AllowlistBlocks(t *testing.T) {
 	provider := &mockProvider{response: "done"}
 	resolver := newMockResolver(
 		&AgentInfo{ID: "main", Name: "Main", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
-		&AgentInfo{ID: "restricted", Name: "Restricted", Model: "test", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
+		&AgentInfo{
+			ID:       "restricted",
+			Name:     "Restricted",
+			Model:    "test",
+			Provider: provider,
+			Tools:    tools.NewToolRegistry(),
+			MaxIter:  5,
+		},
 	)
 
 	bb := NewBlackboard()
@@ -542,7 +574,14 @@ func TestHandoffTool_AllowlistPermits(t *testing.T) {
 	provider := &mockProvider{response: "allowed result"}
 	resolver := newMockResolver(
 		&AgentInfo{ID: "main", Name: "Main", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
-		&AgentInfo{ID: "coder", Name: "Coder", Model: "test", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
+		&AgentInfo{
+			ID:       "coder",
+			Name:     "Coder",
+			Model:    "test",
+			Provider: provider,
+			Tools:    tools.NewToolRegistry(),
+			MaxIter:  5,
+		},
 	)
 
 	bb := NewBlackboard()
@@ -567,7 +606,14 @@ func TestHandoffTool_NoAllowlistAllowsAll(t *testing.T) {
 	provider := &mockProvider{response: "ok"}
 	resolver := newMockResolver(
 		&AgentInfo{ID: "main", Name: "Main", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
-		&AgentInfo{ID: "any", Name: "Any", Model: "test", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
+		&AgentInfo{
+			ID:       "any",
+			Name:     "Any",
+			Model:    "test",
+			Provider: provider,
+			Tools:    tools.NewToolRegistry(),
+			MaxIter:  5,
+		},
 	)
 
 	bb := NewBlackboard()
@@ -587,7 +633,14 @@ func TestHandoffTool_SetBoard(t *testing.T) {
 	provider := &mockProvider{response: "done"}
 	resolver := newMockResolver(
 		&AgentInfo{ID: "main", Name: "Main", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
-		&AgentInfo{ID: "coder", Name: "Coder", Model: "test", Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5},
+		&AgentInfo{
+			ID:       "coder",
+			Name:     "Coder",
+			Model:    "test",
+			Provider: provider,
+			Tools:    tools.NewToolRegistry(),
+			MaxIter:  5,
+		},
 	)
 
 	bb1 := NewBlackboard()
@@ -632,7 +685,7 @@ func TestAllowlistCheckerFunc(t *testing.T) {
 }
 
 // TestExecuteHandoff_DepthBoundary verifies that depth == maxDepth - 1 (one below limit) succeeds,
-// while depth == maxDepth fails. This is the exact boundary behaviour of the recursion guard.
+// while depth == maxDepth fails. This is the exact boundary behavior of the recursion guard.
 func TestExecuteHandoff_DepthBoundary(t *testing.T) {
 	provider := &mockProvider{response: "done"}
 	resolver := newMockResolver(&AgentInfo{
@@ -844,10 +897,10 @@ type simpleTool struct {
 	name string
 }
 
-func (s *simpleTool) Name() string                       { return s.name }
-func (s *simpleTool) Description() string                { return "test tool" }
-func (s *simpleTool) Parameters() map[string]interface{} { return nil }
-func (s *simpleTool) Execute(_ context.Context, _ map[string]interface{}) *tools.ToolResult {
+func (s *simpleTool) Name() string               { return s.name }
+func (s *simpleTool) Description() string        { return "test tool" }
+func (s *simpleTool) Parameters() map[string]any { return nil }
+func (s *simpleTool) Execute(_ context.Context, _ map[string]any) *tools.ToolResult {
 	return tools.NewToolResult("ok")
 }
 

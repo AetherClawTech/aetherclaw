@@ -265,7 +265,6 @@ func (sm *SessionManager) loadSessions() error {
 	return nil
 }
 
-// SetHistory updates the messages of a session.
 // SessionInfo provides metadata about a session.
 type SessionInfo struct {
 	Key          string    `json:"key"`

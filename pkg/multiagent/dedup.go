@@ -12,7 +12,7 @@ import (
 // Idempotency cache defaults.
 // Follows Stripe's idempotency key pattern: deterministic keys with TTL-based expiry.
 const (
-	DefaultDedupTTL     = 5 * time.Minute
+	DefaultDedupTTL           = 5 * time.Minute
 	DefaultDedupSweepInterval = 60 * time.Second
 )
 
@@ -147,7 +147,7 @@ func (dc *DedupCache) sweep() {
 		}
 	}
 	if expired > 0 {
-		logger.DebugCF("dedup", "Sweep completed", map[string]interface{}{
+		logger.DebugCF("dedup", "Sweep completed", map[string]any{
 			"expired":   expired,
 			"remaining": len(dc.entries),
 		})

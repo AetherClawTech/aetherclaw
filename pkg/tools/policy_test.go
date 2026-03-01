@@ -71,7 +71,16 @@ func TestApplyPolicy_EmptyPolicy(t *testing.T) {
 }
 
 func TestApplyPolicy_GroupRefs(t *testing.T) {
-	reg := setupTestRegistry("read_file", "write_file", "edit_file", "append_file", "list_dir", "web_search", "web_fetch", "exec")
+	reg := setupTestRegistry(
+		"read_file",
+		"write_file",
+		"edit_file",
+		"append_file",
+		"list_dir",
+		"web_search",
+		"web_fetch",
+		"exec",
+	)
 	ApplyPolicy(reg, ToolPolicy{Deny: []string{"group:web"}})
 
 	names := registryNames(reg)

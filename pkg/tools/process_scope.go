@@ -99,7 +99,7 @@ func (ps *ProcessScope) KillAll(sessionKey string) int {
 	}
 
 	if killed > 0 {
-		logger.InfoCF("process_scope", "Killed session processes", map[string]interface{}{
+		logger.InfoCF("process_scope", "Killed session processes", map[string]any{
 			"session_key": sessionKey,
 			"killed":      killed,
 		})

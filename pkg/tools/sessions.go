@@ -39,15 +39,15 @@ func (t *SessionsListTool) Description() string {
 }
 func (t *SessionsListTool) SetContext(_, _ string) {}
 
-func (t *SessionsListTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *SessionsListTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"agent_id": map[string]interface{}{
+		"properties": map[string]any{
+			"agent_id": map[string]any{
 				"type":        "string",
 				"description": "Target agent ID to list sessions for",
 			},
-			"limit": map[string]interface{}{
+			"limit": map[string]any{
 				"type":        "integer",
 				"description": "Maximum sessions to return (default 20)",
 			},
@@ -56,7 +56,7 @@ func (t *SessionsListTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *SessionsListTool) Execute(_ context.Context, args map[string]interface{}) *ToolResult {
+func (t *SessionsListTool) Execute(_ context.Context, args map[string]any) *ToolResult {
 	agentID, _ := args["agent_id"].(string)
 	if agentID == "" {
 		return ErrorResult("agent_id is required")
@@ -107,19 +107,19 @@ func (t *SessionsHistoryTool) Description() string {
 }
 func (t *SessionsHistoryTool) SetContext(_, _ string) {}
 
-func (t *SessionsHistoryTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *SessionsHistoryTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"agent_id": map[string]interface{}{
+		"properties": map[string]any{
+			"agent_id": map[string]any{
 				"type":        "string",
 				"description": "Target agent ID",
 			},
-			"session_key": map[string]interface{}{
+			"session_key": map[string]any{
 				"type":        "string",
 				"description": "Session key to read history from",
 			},
-			"limit": map[string]interface{}{
+			"limit": map[string]any{
 				"type":        "integer",
 				"description": "Maximum messages to return (default 50)",
 			},
@@ -130,7 +130,7 @@ func (t *SessionsHistoryTool) Parameters() map[string]interface{} {
 
 const maxHistoryBytes = 80 * 1024 // 80KB cap like OpenClaw
 
-func (t *SessionsHistoryTool) Execute(_ context.Context, args map[string]interface{}) *ToolResult {
+func (t *SessionsHistoryTool) Execute(_ context.Context, args map[string]any) *ToolResult {
 	agentID, _ := args["agent_id"].(string)
 	sessionKey, _ := args["session_key"].(string)
 	if agentID == "" || sessionKey == "" {
@@ -212,23 +212,23 @@ func (t *SessionsSendTool) SetContext(channel, chatID string) {
 	t.chatID = chatID
 }
 
-func (t *SessionsSendTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *SessionsSendTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"agent_id": map[string]interface{}{
+		"properties": map[string]any{
+			"agent_id": map[string]any{
 				"type":        "string",
 				"description": "Target agent ID to send the message to",
 			},
-			"message": map[string]interface{}{
+			"message": map[string]any{
 				"type":        "string",
 				"description": "Message content to send",
 			},
-			"channel": map[string]interface{}{
+			"channel": map[string]any{
 				"type":        "string",
 				"description": "Optional origin channel for routing the reply (defaults to current channel)",
 			},
-			"chat_id": map[string]interface{}{
+			"chat_id": map[string]any{
 				"type":        "string",
 				"description": "Optional chat ID for routing the reply",
 			},
@@ -237,7 +237,7 @@ func (t *SessionsSendTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *SessionsSendTool) Execute(_ context.Context, args map[string]interface{}) *ToolResult {
+func (t *SessionsSendTool) Execute(_ context.Context, args map[string]any) *ToolResult {
 	agentID, _ := args["agent_id"].(string)
 	message, _ := args["message"].(string)
 	if agentID == "" || message == "" {
@@ -252,11 +252,7 @@ func (t *SessionsSendTool) Execute(_ context.Context, args map[string]interface{
 		return ErrorResult("message bus not available")
 	}
 
-	channel, _ := args["channel"].(string)
 	chatID, _ := args["chat_id"].(string)
-	if channel == "" {
-		channel = t.channel
-	}
 	if chatID == "" {
 		chatID = t.chatID
 	}

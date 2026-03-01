@@ -12,9 +12,9 @@ type AutoReplyRule struct {
 	ID         string `json:"id"`
 	Channel    string `json:"channel"`
 	ChatID     string `json:"chat_id,omitempty"`
-	Pattern    string `json:"pattern,omitempty"`    // regex pattern to match (empty = all messages)
-	Response   string `json:"response,omitempty"`   // static response (empty = use agent)
-	Activation string `json:"activation"`           // "always", "mention", "scheduled"
+	Pattern    string `json:"pattern,omitempty"`  // regex pattern to match (empty = all messages)
+	Response   string `json:"response,omitempty"` // static response (empty = use agent)
+	Activation string `json:"activation"`         // "always", "mention", "scheduled"
 	Enabled    bool   `json:"enabled"`
 }
 
@@ -101,32 +101,32 @@ func (t *AutoReplyTool) Description() string {
 	return "Manage auto-reply rules: add rules to automatically respond to messages on specific channels, list active rules, or remove rules."
 }
 
-func (t *AutoReplyTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *AutoReplyTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"action": map[string]interface{}{
+		"properties": map[string]any{
+			"action": map[string]any{
 				"type":        "string",
 				"description": "Action: 'add', 'remove', 'list', 'enable', 'disable'",
 				"enum":        []string{"add", "remove", "list", "enable", "disable"},
 			},
-			"id": map[string]interface{}{
+			"id": map[string]any{
 				"type":        "string",
 				"description": "Rule ID (for remove/enable/disable)",
 			},
-			"channel": map[string]interface{}{
+			"channel": map[string]any{
 				"type":        "string",
 				"description": "Channel for the rule (for add)",
 			},
-			"chat_id": map[string]interface{}{
+			"chat_id": map[string]any{
 				"type":        "string",
 				"description": "Chat ID for the rule (for add, optional)",
 			},
-			"response": map[string]interface{}{
+			"response": map[string]any{
 				"type":        "string",
 				"description": "Static response text (for add, optional — empty means use agent)",
 			},
-			"activation": map[string]interface{}{
+			"activation": map[string]any{
 				"type":        "string",
 				"description": "Activation mode: 'always' or 'mention' (for add)",
 				"enum":        []string{"always", "mention"},
@@ -136,7 +136,7 @@ func (t *AutoReplyTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *AutoReplyTool) Execute(_ context.Context, args map[string]interface{}) *ToolResult {
+func (t *AutoReplyTool) Execute(_ context.Context, args map[string]any) *ToolResult {
 	action, _ := args["action"].(string)
 
 	switch action {

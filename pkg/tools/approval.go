@@ -10,15 +10,15 @@ import (
 
 // ApprovalRequest represents a pending tool execution approval.
 type ApprovalRequest struct {
-	ID         string                 `json:"id"`
-	ToolName   string                 `json:"tool_name"`
-	Args       map[string]interface{} `json:"args"`
-	Reason     string                 `json:"reason"`
-	Channel    string                 `json:"channel"`
-	ChatID     string                 `json:"chat_id"`
-	CreatedAt  time.Time              `json:"created_at"`
-	Status     string                 `json:"status"` // "pending", "approved", "rejected"
-	ResolvedAt *time.Time             `json:"resolved_at,omitempty"`
+	ID         string         `json:"id"`
+	ToolName   string         `json:"tool_name"`
+	Args       map[string]any `json:"args"`
+	Reason     string         `json:"reason"`
+	Channel    string         `json:"channel"`
+	ChatID     string         `json:"chat_id"`
+	CreatedAt  time.Time      `json:"created_at"`
+	Status     string         `json:"status"` // "pending", "approved", "rejected"
+	ResolvedAt *time.Time     `json:"resolved_at,omitempty"`
 }
 
 // ApprovalManager manages execution approval requests.
@@ -36,7 +36,7 @@ func NewApprovalManager() *ApprovalManager {
 }
 
 // Request creates a new approval request.
-func (m *ApprovalManager) Request(toolName string, args map[string]interface{}, reason, channel, chatID string) string {
+func (m *ApprovalManager) Request(toolName string, args map[string]any, reason, channel, chatID string) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -138,16 +138,16 @@ func (t *ApprovalTool) Description() string {
 	return "Manage execution approvals: list pending requests, approve or reject tool executions that require user confirmation."
 }
 
-func (t *ApprovalTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *ApprovalTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"action": map[string]interface{}{
+		"properties": map[string]any{
+			"action": map[string]any{
 				"type":        "string",
 				"description": "Action: 'list', 'approve', 'reject'",
 				"enum":        []string{"list", "approve", "reject"},
 			},
-			"id": map[string]interface{}{
+			"id": map[string]any{
 				"type":        "string",
 				"description": "Approval request ID (for approve/reject)",
 			},
@@ -156,7 +156,7 @@ func (t *ApprovalTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *ApprovalTool) Execute(_ context.Context, args map[string]interface{}) *ToolResult {
+func (t *ApprovalTool) Execute(_ context.Context, args map[string]any) *ToolResult {
 	action, _ := args["action"].(string)
 
 	switch action {

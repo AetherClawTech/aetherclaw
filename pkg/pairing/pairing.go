@@ -34,14 +34,14 @@ type ApprovedDevice struct {
 type Store struct {
 	dir      string
 	mu       sync.RWMutex
-	pending  map[string]*PairRequest  // code -> request
+	pending  map[string]*PairRequest    // code -> request
 	approved map[string]*ApprovedDevice // "channel:senderID" -> device
 }
 
 // NewStore creates a pairing store in the given directory.
 func NewStore(workspaceDir string) *Store {
 	dir := filepath.Join(workspaceDir, "pairing")
-	os.MkdirAll(dir, 0755)
+	os.MkdirAll(dir, 0o755)
 
 	s := &Store{
 		dir:      dir,
@@ -203,7 +203,7 @@ func (s *Store) CleanExpired() int {
 // Internal persistence
 
 type storeData struct {
-	Pending  map[string]*PairRequest  `json:"pending"`
+	Pending  map[string]*PairRequest    `json:"pending"`
 	Approved map[string]*ApprovedDevice `json:"approved"`
 }
 
@@ -240,7 +240,7 @@ func (s *Store) saveLocked() {
 
 	path := filepath.Join(s.dir, "store.json")
 	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
 		return
 	}
 	os.Rename(tmpPath, path)

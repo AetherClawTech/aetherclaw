@@ -8,7 +8,7 @@ import (
 	"github.com/AetherClawTech/aetherclaw/pkg/logger"
 )
 
-// ActiveRun represents a running handoff or spawn that can be cancelled.
+// ActiveRun represents a running handoff or spawn that can be canceled.
 type ActiveRun struct {
 	SessionKey string
 	AgentID    string
@@ -32,7 +32,7 @@ func NewRunRegistry() *RunRegistry {
 func (r *RunRegistry) Register(run *ActiveRun) {
 	r.runs.Store(run.SessionKey, run)
 	logger.DebugCF("cascade", "Run registered",
-		map[string]interface{}{
+		map[string]any{
 			"session_key": run.SessionKey,
 			"agent_id":    run.AgentID,
 			"parent_key":  run.ParentKey,
@@ -43,19 +43,19 @@ func (r *RunRegistry) Register(run *ActiveRun) {
 func (r *RunRegistry) Deregister(sessionKey string) {
 	r.runs.Delete(sessionKey)
 	logger.DebugCF("cascade", "Run deregistered",
-		map[string]interface{}{
+		map[string]any{
 			"session_key": sessionKey,
 		})
 }
 
 // CascadeStop cancels a run and all its descendants.
-// Returns the number of runs cancelled. Uses a seen-set to prevent infinite loops.
+// Returns the number of runs canceled. Uses a seen-set to prevent infinite loops.
 func (r *RunRegistry) CascadeStop(sessionKey string) int {
 	seen := make(map[string]bool)
 	killed := r.cascadeStop(sessionKey, seen)
 	if killed > 0 {
 		logger.InfoCF("cascade", "Cascade stop completed",
-			map[string]interface{}{
+			map[string]any{
 				"root_key": sessionKey,
 				"killed":   killed,
 			})
@@ -75,15 +75,15 @@ func (r *RunRegistry) cascadeStop(sessionKey string, seen map[string]bool) int {
 		run := v.(*ActiveRun)
 		run.Cancel()
 		killed++
-		logger.DebugCF("cascade", "Run cancelled",
-			map[string]interface{}{
+		logger.DebugCF("cascade", "Run canceled",
+			map[string]any{
 				"session_key": sessionKey,
 				"agent_id":    run.AgentID,
 			})
 	}
 
 	// Find and cascade-stop all children (runs whose ParentKey == sessionKey)
-	r.runs.Range(func(key, value interface{}) bool {
+	r.runs.Range(func(key, value any) bool {
 		childRun := value.(*ActiveRun)
 		if childRun.ParentKey == sessionKey {
 			killed += r.cascadeStop(key.(string), seen)
@@ -94,10 +94,10 @@ func (r *RunRegistry) cascadeStop(sessionKey string, seen map[string]bool) int {
 	return killed
 }
 
-// StopAll cancels every active run. Returns the number cancelled.
+// StopAll cancels every active run. Returns the number canceled.
 func (r *RunRegistry) StopAll() int {
 	killed := 0
-	r.runs.Range(func(key, value interface{}) bool {
+	r.runs.Range(func(key, value any) bool {
 		run := value.(*ActiveRun)
 		run.Cancel()
 		r.runs.Delete(key)
@@ -106,7 +106,7 @@ func (r *RunRegistry) StopAll() int {
 	})
 	if killed > 0 {
 		logger.InfoCF("cascade", "Stop all completed",
-			map[string]interface{}{"killed": killed})
+			map[string]any{"killed": killed})
 	}
 	return killed
 }
@@ -114,7 +114,7 @@ func (r *RunRegistry) StopAll() int {
 // ActiveCount returns the number of currently active runs.
 func (r *RunRegistry) ActiveCount() int {
 	count := 0
-	r.runs.Range(func(_, _ interface{}) bool {
+	r.runs.Range(func(_, _ any) bool {
 		count++
 		return true
 	})
@@ -124,7 +124,7 @@ func (r *RunRegistry) ActiveCount() int {
 // GetChildren returns session keys of all direct children of the given parent.
 func (r *RunRegistry) GetChildren(parentKey string) []string {
 	var children []string
-	r.runs.Range(func(key, value interface{}) bool {
+	r.runs.Range(func(key, value any) bool {
 		run := value.(*ActiveRun)
 		if run.ParentKey == parentKey {
 			children = append(children, key.(string))

@@ -71,7 +71,7 @@ func (r *AuthRotator) NextAvailable() *AuthProfile {
 // MarkFailure records a failure for a specific profile.
 func (r *AuthRotator) MarkFailure(profileID string, reason FailoverReason) {
 	r.cooldown.MarkFailure(profileID, reason)
-	logger.WarnCF("auth_rotation", "Profile marked as failed", map[string]interface{}{
+	logger.WarnCF("auth_rotation", "Profile marked as failed", map[string]any{
 		"profile_id": profileID,
 		"reason":     string(reason),
 		"remaining":  r.cooldown.CooldownRemaining(profileID).Round(time.Second).String(),
@@ -126,7 +126,7 @@ func NewAuthRotatingProvider(
 
 	rotator := NewAuthRotator(profiles, cooldown)
 
-	logger.InfoCF("auth_rotation", "Auth rotation initialized", map[string]interface{}{
+	logger.InfoCF("auth_rotation", "Auth rotation initialized", map[string]any{
 		"profiles": len(profiles),
 	})
 
@@ -144,7 +144,7 @@ func (p *AuthRotatingProvider) Chat(
 	messages []Message,
 	tools []ToolDefinition,
 	model string,
-	opts map[string]interface{},
+	opts map[string]any,
 ) (*LLMResponse, error) {
 	profile := p.rotator.NextAvailable()
 	if profile == nil {
@@ -153,7 +153,6 @@ func (p *AuthRotatingProvider) Chat(
 
 	provider := p.providers[profile.ID]
 	resp, err := provider.Chat(ctx, messages, tools, model, opts)
-
 	if err != nil {
 		// Classify and record failure against this specific profile.
 		if failErr := ClassifyError(err, profile.ID, model); failErr != nil && failErr.IsRetriable() {

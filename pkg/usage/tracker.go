@@ -55,7 +55,7 @@ type Tracker struct {
 // NewTracker creates a usage tracker that stores data in the given directory.
 func NewTracker(workspaceDir string) *Tracker {
 	dir := filepath.Join(workspaceDir, "usage")
-	os.MkdirAll(dir, 0755)
+	os.MkdirAll(dir, 0o755)
 	return &Tracker{
 		dir:   dir,
 		today: time.Now().Format("2006-01-02"),
@@ -160,7 +160,7 @@ func (t *Tracker) flushLocked() {
 		if err != nil {
 			continue
 		}
-		os.WriteFile(path, data, 0644)
+		os.WriteFile(path, data, 0o644)
 	}
 
 	t.entries = t.entries[:0]
@@ -169,7 +169,7 @@ func (t *Tracker) flushLocked() {
 func (t *Tracker) dayFilePath(date string) string {
 	// Store as usage/YYYY-MM/DD.json
 	parts := filepath.Join(t.dir, date[:7])
-	os.MkdirAll(parts, 0755)
+	os.MkdirAll(parts, 0o755)
 	return filepath.Join(parts, date[8:]+".json")
 }
 
@@ -233,18 +233,18 @@ func estimateCost(model string, inputTokens, outputTokens int) float64 {
 	// Price per 1M tokens (input/output) — approximate
 	type pricing struct{ input, output float64 }
 	prices := map[string]pricing{
-		"claude-3-5-sonnet":  {3.0, 15.0},
-		"claude-3-haiku":     {0.25, 1.25},
-		"claude-3-opus":      {15.0, 75.0},
-		"gpt-4o":             {5.0, 15.0},
-		"gpt-4o-mini":        {0.15, 0.6},
-		"gpt-4-turbo":        {10.0, 30.0},
-		"gemini-1.5-pro":     {3.5, 10.5},
-		"gemini-1.5-flash":   {0.35, 1.05},
-		"glm-4":              {1.0, 1.0},
-		"glm-4.7":            {1.0, 1.0},
-		"deepseek-chat":      {0.14, 0.28},
-		"deepseek-reasoner":  {0.55, 2.19},
+		"claude-3-5-sonnet": {3.0, 15.0},
+		"claude-3-haiku":    {0.25, 1.25},
+		"claude-3-opus":     {15.0, 75.0},
+		"gpt-4o":            {5.0, 15.0},
+		"gpt-4o-mini":       {0.15, 0.6},
+		"gpt-4-turbo":       {10.0, 30.0},
+		"gemini-1.5-pro":    {3.5, 10.5},
+		"gemini-1.5-flash":  {0.35, 1.05},
+		"glm-4":             {1.0, 1.0},
+		"glm-4.7":           {1.0, 1.0},
+		"deepseek-chat":     {0.14, 0.28},
+		"deepseek-reasoner": {0.55, 2.19},
 	}
 
 	p, ok := prices[model]

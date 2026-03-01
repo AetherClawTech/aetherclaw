@@ -47,12 +47,12 @@ func TestRunRegistry_CascadeStop_SingleRun(t *testing.T) {
 		t.Fatalf("killed = %d, want 1", killed)
 	}
 
-	// Context should be cancelled
+	// Context should be canceled
 	select {
 	case <-ctx.Done():
 		// expected
 	default:
-		t.Fatal("context not cancelled after CascadeStop")
+		t.Fatal("context not canceled after CascadeStop")
 	}
 
 	if reg.ActiveCount() != 0 {
@@ -100,16 +100,16 @@ func TestRunRegistry_CascadeStop_ParentChildChain(t *testing.T) {
 		t.Fatalf("killed = %d, want 3", killed)
 	}
 
-	// All contexts should be cancelled
+	// All contexts should be canceled
 	select {
 	case <-ctxChild.Done():
 	default:
-		t.Fatal("child context not cancelled")
+		t.Fatal("child context not canceled")
 	}
 	select {
 	case <-ctxGrandchild.Done():
 	default:
-		t.Fatal("grandchild context not cancelled")
+		t.Fatal("grandchild context not canceled")
 	}
 
 	if reg.ActiveCount() != 0 {
@@ -153,11 +153,11 @@ func TestRunRegistry_CascadeStop_MidChain(t *testing.T) {
 		t.Fatalf("killed = %d, want 2", killed)
 	}
 
-	// Grandchild context cancelled
+	// Grandchild context canceled
 	select {
 	case <-ctxGrandchild.Done():
 	default:
-		t.Fatal("grandchild context not cancelled")
+		t.Fatal("grandchild context not canceled")
 	}
 
 	// Parent still active
@@ -244,7 +244,7 @@ func TestRunRegistry_CascadeStop_NonExistent(t *testing.T) {
 func TestRunRegistry_StopAll(t *testing.T) {
 	reg := NewRunRegistry()
 
-	var cancelled atomic.Int32
+	var canceled atomic.Int32
 	for i := 0; i < 5; i++ {
 		_, cancel := context.WithCancel(context.Background())
 		idx := i
@@ -252,7 +252,7 @@ func TestRunRegistry_StopAll(t *testing.T) {
 			SessionKey: fmt.Sprintf("run-%d", idx),
 			AgentID:    "agent",
 			Cancel: func() {
-				cancelled.Add(1)
+				canceled.Add(1)
 				cancel()
 			},
 			StartedAt: time.Now(),
@@ -263,8 +263,8 @@ func TestRunRegistry_StopAll(t *testing.T) {
 	if killed != 5 {
 		t.Fatalf("StopAll killed = %d, want 5", killed)
 	}
-	if cancelled.Load() != 5 {
-		t.Fatalf("cancel called %d times, want 5", cancelled.Load())
+	if canceled.Load() != 5 {
+		t.Fatalf("cancel called %d times, want 5", canceled.Load())
 	}
 	if reg.ActiveCount() != 0 {
 		t.Fatalf("ActiveCount = %d after StopAll, want 0", reg.ActiveCount())
@@ -311,17 +311,17 @@ func TestRunRegistry_ContextCancellationPropagates(t *testing.T) {
 	// Cascade stop on parent should cancel parent context
 	reg.CascadeStop("parent")
 
-	// Parent context cancelled
+	// Parent context canceled
 	select {
 	case <-parentCtx.Done():
 	default:
-		t.Fatal("parent context not cancelled")
+		t.Fatal("parent context not canceled")
 	}
 
-	// Child context should ALSO be cancelled (Go context tree propagation)
+	// Child context should ALSO be canceled (Go context tree propagation)
 	select {
 	case <-childCtx.Done():
 	default:
-		t.Fatal("child context not cancelled via Go context tree")
+		t.Fatal("child context not canceled via Go context tree")
 	}
 }

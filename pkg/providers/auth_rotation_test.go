@@ -148,7 +148,13 @@ type mockRotatingProvider struct {
 	failErr   error
 }
 
-func (m *mockRotatingProvider) Chat(_ context.Context, _ []Message, _ []ToolDefinition, _ string, _ map[string]interface{}) (*LLMResponse, error) {
+func (m *mockRotatingProvider) Chat(
+	_ context.Context,
+	_ []Message,
+	_ []ToolDefinition,
+	_ string,
+	_ map[string]any,
+) (*LLMResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.callCount++
@@ -307,7 +313,7 @@ func TestAuthRotator_ConcurrentAccess(t *testing.T) {
 
 	// All profiles should have been used
 	count := 0
-	seen.Range(func(_, _ interface{}) bool {
+	seen.Range(func(_, _ any) bool {
 		count++
 		return true
 	})

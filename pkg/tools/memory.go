@@ -26,36 +26,36 @@ func (t *MemoryTool) Description() string {
 	return "Search, store, list, or delete memories. Memories are persistent and searchable with keyword and semantic (vector) search. Use 'search' to find relevant memories, 'store' to save new information, 'list' to browse, 'delete' to remove."
 }
 
-func (t *MemoryTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
+func (t *MemoryTool) Parameters() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"action": map[string]interface{}{
+		"properties": map[string]any{
+			"action": map[string]any{
 				"type":        "string",
 				"description": "Action: 'search', 'store', 'list', 'delete', 'count'",
 				"enum":        []string{"search", "store", "list", "delete", "count"},
 			},
-			"query": map[string]interface{}{
+			"query": map[string]any{
 				"type":        "string",
 				"description": "Search query (for search action)",
 			},
-			"content": map[string]interface{}{
+			"content": map[string]any{
 				"type":        "string",
 				"description": "Content to store (for store action)",
 			},
-			"source": map[string]interface{}{
+			"source": map[string]any{
 				"type":        "string",
 				"description": "Source/origin of the memory (for store action)",
 			},
-			"tags": map[string]interface{}{
+			"tags": map[string]any{
 				"type":        "string",
 				"description": "Comma-separated tags (for store/list actions)",
 			},
-			"id": map[string]interface{}{
+			"id": map[string]any{
 				"type":        "string",
 				"description": "Memory chunk ID (for delete action)",
 			},
-			"limit": map[string]interface{}{
+			"limit": map[string]any{
 				"type":        "integer",
 				"description": "Maximum results (default: 10)",
 			},
@@ -64,7 +64,7 @@ func (t *MemoryTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *MemoryTool) Execute(ctx context.Context, args map[string]interface{}) *ToolResult {
+func (t *MemoryTool) Execute(ctx context.Context, args map[string]any) *ToolResult {
 	action, _ := args["action"].(string)
 
 	switch action {
@@ -131,9 +131,9 @@ func (t *MemoryTool) Execute(ctx context.Context, args map[string]interface{}) *
 		}
 
 		// Return simplified list (without embeddings)
-		simplified := make([]map[string]interface{}, len(chunks))
+		simplified := make([]map[string]any, len(chunks))
 		for i, c := range chunks {
-			simplified[i] = map[string]interface{}{
+			simplified[i] = map[string]any{
 				"id":         c.ID,
 				"content":    truncateStr(c.Content, 200),
 				"source":     c.Source,
