@@ -20,12 +20,11 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
-    if: ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
     steps:
       - name: Push notification
-        if: github.event_name == 'push'
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: github.event_name == 'push' && env.DISCORD_WEBHOOK != ''
         run: |
           BRANCH="${GITHUB_REF#refs/heads/}"
           COMMIT_COUNT=$(echo '${{ toJson(github.event.commits) }}' | jq 'length')
@@ -46,9 +45,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
       - name: PR notification
-        if: github.event_name == 'pull_request_target'
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: github.event_name == 'pull_request_target' && env.DISCORD_WEBHOOK != ''
         run: |
           ACTION="${{ github.event.action }}"
           PR_NUM="${{ github.event.pull_request.number }}"
@@ -92,9 +89,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
       - name: PR review notification
-        if: github.event_name == 'pull_request_review'
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: github.event_name == 'pull_request_review' && env.DISCORD_WEBHOOK != ''
         run: |
           STATE="${{ github.event.review.state }}"
           PR_NUM="${{ github.event.pull_request.number }}"
@@ -126,9 +121,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
       - name: Review comment notification
-        if: github.event_name == 'pull_request_review_comment'
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: github.event_name == 'pull_request_review_comment' && env.DISCORD_WEBHOOK != ''
         run: |
           PR_NUM="${{ github.event.pull_request.number }}"
           COMMENT_URL="${{ github.event.comment.html_url }}"
@@ -147,9 +140,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
       - name: Issue notification
-        if: github.event_name == 'issues'
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: github.event_name == 'issues' && env.DISCORD_WEBHOOK != ''
         run: |
           ACTION="${{ github.event.action }}"
           ISSUE_NUM="${{ github.event.issue.number }}"
@@ -176,9 +167,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
       - name: Issue comment notification
-        if: github.event_name == 'issue_comment'
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: github.event_name == 'issue_comment' && env.DISCORD_WEBHOOK != ''
         run: |
           ISSUE_NUM="${{ github.event.issue.number }}"
           COMMENT_URL="${{ github.event.comment.html_url }}"
@@ -196,9 +185,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
       - name: Release notification
-        if: github.event_name == 'release'
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: github.event_name == 'release' && env.DISCORD_WEBHOOK != ''
         run: |
           TAG="${{ github.event.release.tag_name }}"
           NAME=$(echo '${{ github.event.release.name }}' | sed 's/"/\\"/g' | cut -c1-100)
@@ -217,9 +204,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
       - name: Branch/tag created notification
-        if: github.event_name == 'create'
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        if: github.event_name == 'create' && env.DISCORD_WEBHOOK != ''
         run: |
           REF_TYPE="${{ github.event.ref_type }}"
           REF="${{ github.event.ref }}"
