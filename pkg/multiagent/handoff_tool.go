@@ -152,6 +152,11 @@ func (t *HandoffTool) Execute(ctx context.Context, args map[string]any) *tools.T
 		}
 	}
 
+	board := t.board
+	if ctxBoard := BlackboardFromContext(ctx); ctxBoard != nil {
+		board = ctxBoard
+	}
+
 	// Create cancellable context for cascade stop support.
 	// If the parent context is cancelled, this handoff is also cancelled.
 	childCtx, cancel := context.WithCancel(ctx)
@@ -170,7 +175,7 @@ func (t *HandoffTool) Execute(ctx context.Context, args map[string]any) *tools.T
 		defer t.registry.Deregister(childSessionKey)
 	}
 
-	result := ExecuteHandoff(childCtx, t.resolver, t.board, HandoffRequest{
+	result := ExecuteHandoff(childCtx, t.resolver, board, HandoffRequest{
 		FromAgentID:  t.fromAgentID,
 		ToAgentID:    agentID,
 		Task:         task,

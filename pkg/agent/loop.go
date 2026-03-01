@@ -27,6 +27,7 @@ import (
 	"github.com/AetherClawTech/aetherclaw/pkg/logger"
 	"github.com/AetherClawTech/aetherclaw/pkg/media"
 	"github.com/AetherClawTech/aetherclaw/pkg/memory"
+	"github.com/AetherClawTech/aetherclaw/pkg/multiagent"
 	"github.com/AetherClawTech/aetherclaw/pkg/pairing"
 	"github.com/AetherClawTech/aetherclaw/pkg/providers"
 	"github.com/AetherClawTech/aetherclaw/pkg/routing"
@@ -46,6 +47,7 @@ type AgentLoop struct {
 	state          *state.Manager
 	running        atomic.Bool
 	summarizing    sync.Map
+	blackboards    *blackboardStore
 	fallback       *providers.FallbackChain
 	channelManager *channels.Manager
 	mediaStore     media.MediaStore
@@ -95,6 +97,7 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 		registry:    registry,
 		state:       stateManager,
 		summarizing: sync.Map{},
+		blackboards: newBlackboardStore(defaultBlackboardCacheSize),
 		fallback:    fallbackChain,
 		cronService: cronService,
 	}
@@ -185,6 +188,7 @@ func registerSharedTools(
 
 	// Loop detector hook (shared across agents)
 	loopDetector := tools.NewLoopDetector(tools.DefaultLoopDetectorConfig())
+	multiagentResolver := newMultiagentResolver(registry)
 
 	for _, agentID := range registry.ListAgentIDs() {
 		agent, ok := registry.GetAgent(agentID)
@@ -250,6 +254,14 @@ func registerSharedTools(
 			return registry.CanSpawnSubagent(currentAgentID, targetAgentID)
 		})
 		agent.Tools.Register(spawnTool)
+
+		// Multi-agent tools (blackboard + handoff)
+		agent.Tools.Register(multiagent.NewBlackboardTool(nil, currentAgentID))
+		handoffTool := multiagent.NewHandoffTool(multiagentResolver, nil, currentAgentID)
+		handoffTool.SetAllowlistChecker(multiagent.AllowlistCheckerFunc(func(fromAgentID, toAgentID string) bool {
+			return registry.CanSpawnSubagent(fromAgentID, toAgentID)
+		}))
+		agent.Tools.Register(handoffTool)
 
 		// --- New tools ---
 
@@ -815,6 +827,7 @@ func (al *AgentLoop) runLLMIteration(
 ) (string, int, error) {
 	iteration := 0
 	var finalContent string
+	toolCtx := al.toolContext(ctx, opts.SessionKey, opts.NoHistory)
 
 	for iteration < agent.MaxIterations {
 		iteration++
@@ -1060,7 +1073,7 @@ func (al *AgentLoop) runLLMIteration(
 			}
 
 			toolResult := agent.Tools.ExecuteWithContext(
-				ctx,
+				toolCtx,
 				tc.Name,
 				tc.Arguments,
 				opts.Channel,
@@ -1127,17 +1140,24 @@ func (al *AgentLoop) runLLMIteration(
 
 // updateToolContexts updates the context for tools that need channel/chatID info.
 func (al *AgentLoop) updateToolContexts(agent *AgentInstance, channel, chatID string) {
-	contextualTools := []string{
-		"message", "spawn", "subagent",
-		"sessions_send", "cron", "channel_actions",
-	}
-	for _, name := range contextualTools {
+	for _, name := range agent.Tools.List() {
 		if tool, ok := agent.Tools.Get(name); ok {
 			if ct, ok := tool.(tools.ContextualTool); ok {
 				ct.SetContext(channel, chatID)
 			}
 		}
 	}
+}
+
+func (al *AgentLoop) toolContext(ctx context.Context, sessionKey string, ephemeral bool) context.Context {
+	if ephemeral {
+		return multiagent.WithBlackboard(ctx, multiagent.NewBlackboard())
+	}
+	if al.blackboards == nil {
+		return ctx
+	}
+	board := al.blackboards.Get(strings.TrimSpace(sessionKey))
+	return multiagent.WithBlackboard(ctx, board)
 }
 
 // maybeSummarize triggers summarization if the session history exceeds thresholds.

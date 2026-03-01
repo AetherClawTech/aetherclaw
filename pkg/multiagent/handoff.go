@@ -35,11 +35,14 @@ type AgentInfo struct {
 	Name         string
 	Role         string
 	SystemPrompt string
-	Model        string
-	Provider     providers.LLMProvider
-	Tools        *tools.ToolRegistry
-	MaxIter      int
-	Capabilities []string // optional tags for capability-based routing (e.g. "coding", "research")
+	// SystemPromptFn provides lazy access to the system prompt for handoff execution.
+	// It avoids eager prompt building during tool description generation.
+	SystemPromptFn func() string `json:"-"`
+	Model          string
+	Provider       providers.LLMProvider
+	Tools          *tools.ToolRegistry
+	MaxIter        int
+	Capabilities   []string // optional tags for capability-based routing (e.g. "coding", "research")
 }
 
 // FindAgentsByCapability returns agents that advertise the given capability.
@@ -126,16 +129,7 @@ func ExecuteHandoff(ctx context.Context, resolver AgentResolver, board *Blackboa
 	newVisited[len(req.Visited)] = req.ToAgentID
 
 	if target.Tools != nil {
-		// Wire session blackboard to target's tools
-		if tool, ok := target.Tools.Get("blackboard"); ok {
-			if ba, ok := tool.(BoardAware); ok {
-				ba.SetBoard(board)
-			}
-		}
 		if tool, ok := target.Tools.Get("handoff"); ok {
-			if ba, ok := tool.(BoardAware); ok {
-				ba.SetBoard(board)
-			}
 			if ht, ok := tool.(*HandoffTool); ok {
 				ht.depth = req.Depth + 1
 				ht.visited = newVisited
@@ -167,7 +161,12 @@ func ExecuteHandoff(ctx context.Context, resolver AgentResolver, board *Blackboa
 		tools.ApplyPolicy(targetTools, tools.ToolPolicy{Deny: denyList})
 	}
 
-	loopResult, err := tools.RunToolLoop(ctx, tools.ToolLoopConfig{
+	toolCtx := ctx
+	if board != nil {
+		toolCtx = WithBlackboard(ctx, board)
+	}
+
+	loopResult, err := tools.RunToolLoop(toolCtx, tools.ToolLoopConfig{
 		Provider:      target.Provider,
 		Model:         target.Model,
 		Tools:         targetTools,
@@ -201,8 +200,13 @@ func buildHandoffSystemPrompt(agent *AgentInfo, board *Blackboard) string {
 	}
 	prompt += ".\n"
 
-	if agent.SystemPrompt != "" {
-		prompt += "\n" + agent.SystemPrompt + "\n"
+	systemPrompt := agent.SystemPrompt
+	if systemPrompt == "" && agent.SystemPromptFn != nil {
+		systemPrompt = agent.SystemPromptFn()
+	}
+
+	if systemPrompt != "" {
+		prompt += "\n" + systemPrompt + "\n"
 	}
 
 	prompt += "\nComplete the delegated task and provide a clear result."

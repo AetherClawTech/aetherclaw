@@ -377,6 +377,24 @@ func TestBlackboardTool_DeleteMissing(t *testing.T) {
 	}
 }
 
+func TestBlackboardTool_ContextBoard(t *testing.T) {
+	bb := NewBlackboard()
+	tool := NewBlackboardTool(nil, "agent")
+	ctx := WithBlackboard(context.Background(), bb)
+
+	result := tool.Execute(ctx, map[string]any{
+		"action": "write",
+		"key":    "status",
+		"value":  "ready",
+	})
+	if result.IsError {
+		t.Fatalf("unexpected error: %v", result.ForLLM)
+	}
+	if got := bb.Get("status"); got != "ready" {
+		t.Fatalf("blackboard value = %q, want %q", got, "ready")
+	}
+}
+
 func TestBoardAware_Interface(t *testing.T) {
 	// Verify both tools implement BoardAware
 	bb := NewBlackboard()
