@@ -3,7 +3,7 @@ name: Discord Notifications
 on:
   push:
     branches: ['**']
-  pull_request:
+  pull_request_target:
     types: [opened, closed, reopened, synchronize, ready_for_review]
   pull_request_review:
     types: [submitted]
@@ -20,6 +20,7 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    if: ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
     steps:
       - name: Push notification
         if: github.event_name == 'push'
@@ -45,7 +46,7 @@ jobs:
           }" "$DISCORD_WEBHOOK"
 
       - name: PR notification
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request_target'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
