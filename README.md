@@ -9,12 +9,13 @@
 A lightweight, single-binary AI agent that runs anywhere — from cloud servers to Raspberry Pi Zero.
 
 ```
-      .-----------.
-     /             \
-    |      ///      |
-     \             /
-      '-----------'
-       AetherClaw
+     .-------.
+    /  / / /  \
+   |  / / /    |
+   | / / /     |
+    \         /
+     '-------'
+    AetherClaw
 ```
 
 ## Features

@@ -9,7 +9,7 @@ import (
 	"github.com/AetherClawTech/aetherclaw/pkg/config"
 )
 
-const Logo = "🦞"
+const Logo = "(///)"
 
 var (
 	version   = "dev"

@@ -60,7 +60,7 @@ func NewContextBuilder(workspace string) *ContextBuilder {
 func (cb *ContextBuilder) getIdentity() string {
 	workspacePath, _ := filepath.Abs(filepath.Join(cb.workspace))
 
-	return fmt.Sprintf(`# aetherclaw 🦞
+	return fmt.Sprintf(`# aetherclaw (///)
 
 You are aetherclaw, a helpful AI assistant.
 

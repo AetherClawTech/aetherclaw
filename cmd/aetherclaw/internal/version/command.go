@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal"
+	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal/brand"
 )
 
 func NewVersionCommand() *cobra.Command {
@@ -22,7 +23,7 @@ func NewVersionCommand() *cobra.Command {
 }
 
 func printVersion() {
-	fmt.Printf("%s aetherclaw %s\n", internal.Logo, internal.FormatVersion())
+	fmt.Printf("%s aetherclaw %s\n", brand.Icon, internal.FormatVersion())
 	build, goVer := internal.FormatBuildInfo()
 	if build != "" {
 		fmt.Printf("  Build: %s\n", build)

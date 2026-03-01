@@ -11,10 +11,12 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal"
 	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal/agent"
 	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal/auth"
+	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal/brand"
 	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal/cron"
 	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal/gateway"
 	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal/migrate"
@@ -24,14 +26,29 @@ import (
 	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal/version"
 )
 
-func NewPicoclawCommand() *cobra.Command {
+func NewAetherClawCommand() *cobra.Command {
+	var showBanner bool
+	var noBanner bool
+
 	short := fmt.Sprintf("%s aetherclaw - Personal AI Assistant v%s\n\n", internal.Logo, internal.GetVersion())
 
 	cmd := &cobra.Command{
 		Use:     "aetherclaw",
 		Short:   short,
-		Example: "aetherclaw list",
+		Example: "aetherclaw agent",
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
+			if noBanner {
+				return
+			}
+			if showBanner || term.IsTerminal(int(os.Stdout.Fd())) {
+				brand.PrintBanner(os.Stdout)
+				fmt.Fprintf(os.Stdout, "  v%s\n\n", internal.GetVersion())
+			}
+		},
 	}
+
+	cmd.PersistentFlags().BoolVar(&showBanner, "banner", false, "force display of startup banner")
+	cmd.PersistentFlags().BoolVar(&noBanner, "no-banner", false, "suppress startup banner")
 
 	cmd.AddCommand(
 		onboard.NewOnboardCommand(),
@@ -49,7 +66,7 @@ func NewPicoclawCommand() *cobra.Command {
 }
 
 func main() {
-	cmd := NewPicoclawCommand()
+	cmd := NewAetherClawCommand()
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}

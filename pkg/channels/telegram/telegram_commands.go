@@ -56,7 +56,7 @@ func (c *cmd) Help(ctx context.Context, message telego.Message) error {
 func (c *cmd) Start(ctx context.Context, message telego.Message) error {
 	_, err := c.bot.SendMessage(ctx, &telego.SendMessageParams{
 		ChatID: telego.ChatID{ID: message.Chat.ID},
-		Text:   "Hello! I am AetherClaw 🦞",
+		Text:   "Hello! I am AetherClaw (///)",
 		ReplyParameters: &telego.ReplyParameters{
 			MessageID: message.MessageID,
 		},

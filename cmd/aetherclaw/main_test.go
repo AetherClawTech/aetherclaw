@@ -11,8 +11,8 @@ import (
 	"github.com/AetherClawTech/aetherclaw/cmd/aetherclaw/internal"
 )
 
-func TestNewPicoclawCommand(t *testing.T) {
-	cmd := NewPicoclawCommand()
+func TestNewAetherClawCommand(t *testing.T) {
+	cmd := NewAetherClawCommand()
 
 	require.NotNil(t, cmd)
 
@@ -24,13 +24,10 @@ func TestNewPicoclawCommand(t *testing.T) {
 	assert.True(t, cmd.HasSubCommands())
 	assert.True(t, cmd.HasAvailableSubCommands())
 
-	assert.False(t, cmd.HasFlags())
+	assert.NotNil(t, cmd.PersistentPreRun)
 
 	assert.Nil(t, cmd.Run)
 	assert.Nil(t, cmd.RunE)
-
-	assert.Nil(t, cmd.PersistentPreRun)
-	assert.Nil(t, cmd.PersistentPostRun)
 
 	allowedCommands := []string{
 		"agent",
@@ -53,4 +50,16 @@ func TestNewPicoclawCommand(t *testing.T) {
 
 		assert.False(t, subcmd.Hidden)
 	}
+}
+
+func TestBannerFlags(t *testing.T) {
+	cmd := NewAetherClawCommand()
+
+	bannerFlag := cmd.PersistentFlags().Lookup("banner")
+	require.NotNil(t, bannerFlag)
+	assert.Equal(t, "false", bannerFlag.DefValue)
+
+	noBannerFlag := cmd.PersistentFlags().Lookup("no-banner")
+	require.NotNil(t, noBannerFlag)
+	assert.Equal(t, "false", noBannerFlag.DefValue)
 }
