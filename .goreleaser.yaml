@@ -103,7 +103,6 @@ dockers_v2:
       - aetherclaw
     images:
       - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/aetherclaw"
-      - "docker.io/{{ .Env.DOCKERHUB_IMAGE_NAME }}"
     tags:
       - "{{ .Tag }}"
       - "latest"

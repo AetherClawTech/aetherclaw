@@ -4,7 +4,7 @@ services:
   #   docker compose -f docker/docker-compose.yml run --rm aetherclaw-agent -m "Hello"
   # ─────────────────────────────────────────────
   aetherclaw-agent:
-    image: docker.io/aetherclaw/aetherclaw:latest
+    image: ghcr.io/aetherclawtech/aetherclaw:latest
     container_name: aetherclaw-agent
     profiles:
       - agent
@@ -22,7 +22,7 @@ services:
   #   docker compose -f docker/docker-compose.yml up aetherclaw-gateway
   # ─────────────────────────────────────────────
   aetherclaw-gateway:
-    image: docker.io/aetherclaw/aetherclaw:latest
+    image: ghcr.io/aetherclawtech/aetherclaw:latest
     container_name: aetherclaw-gateway
     restart: on-failure
     profiles:
