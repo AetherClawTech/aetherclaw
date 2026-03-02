@@ -121,6 +121,24 @@ Full lifecycle control for spawned subagents.
 
 Capabilities that go beyond what existing AI agent platforms offer.
 
+### MCP Hub
+
+Orchestrate multiple external MCP servers through AetherClaw's MCP client — unified tool namespace, health management, and dynamic discovery.
+
+- [ ] Tool namespace management (avoid collisions between MCP sources)
+- [ ] MCP server health monitoring and auto-reconnect
+- [ ] Per-agent MCP server filtering (allow/deny lists per agent)
+- [ ] Dynamic MCP server discovery (config reload without restart)
+
+### Plugin Architecture via MCP
+
+Extend AetherClaw by consuming MCP servers written in any language — no Go code required.
+
+- [ ] Curated MCP server recipes for common use cases (filesystem, databases, APIs)
+- [ ] One-command MCP server installation (`aetherclaw install mcp <name>`)
+- [ ] Plugin marketplace discovery via ClawHub registry
+- [ ] Sandboxed stdio subprocess management with resource limits
+
 ### Observability
 
 Production-grade monitoring and metrics.
