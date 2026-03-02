@@ -10,11 +10,13 @@ This document outlines the development roadmap for AetherClaw as an independent 
 
 AetherClaw ships as a single Go binary with zero runtime dependencies. Today it includes:
 
-- **27 tools** — file ops, shell, web search/fetch, messaging, image generation (DALL-E 3), TTS (OpenAI + ElevenLabs), per-agent memory (BM25 + vector search), cron scheduling, cross-agent sessions, device pairing, usage tracking, approval workflows, and more
+- **30+ tools** — file ops, shell, web search/fetch, messaging, image generation (DALL-E 3), TTS (OpenAI + ElevenLabs + Edge TTS), per-agent memory (BM25 + vector search), cron scheduling, cross-agent sessions, device pairing, usage tracking, approval workflows, and external MCP server tools
 - **14 messaging channels** — Telegram, Discord, Slack, WhatsApp (native + bridge), Feishu, DingTalk, LINE, QQ, OneBot, WeCom, MaixCam, Pico WebSocket
-- **20+ LLM providers** — OpenAI, Anthropic, Gemini, Groq, DeepSeek, Ollama, OpenRouter, Mistral, Qwen, and others via OpenAI-compatible HTTP + dedicated Anthropic adapter + CLI providers (Claude Code, Codex)
+- **20+ LLM providers** — OpenAI, Anthropic, Gemini, Groq, DeepSeek, Ollama, OpenRouter, Mistral, Qwen, and others via OpenAI-compatible HTTP + dedicated Anthropic adapter + CLI providers (Claude Code, Codex) + auth rotation with multi-key cooldown
+- **Multimodal messaging** — images from channels converted to native content parts (Anthropic image blocks, OpenAI multimodal format, CLI fallback)
+- **MCP client** — consume any external MCP server (stdio/SSE/HTTP), tools auto-registered to all agents at startup
 - **Multi-agent architecture** — agent registry, 7-level priority routing, spawn/subagent delegation, cross-agent session communication, model fallback chains with cooldown tracking
-- **Infrastructure** — loop detection hooks, cron service, heartbeat, device event monitoring, skills marketplace integration, context caching (Anthropic + OpenAI)
+- **Infrastructure** — loop detection hooks, cron service, heartbeat, device event monitoring, skills marketplace integration, context caching (Anthropic + OpenAI), link enrichment
 
 ---
 
