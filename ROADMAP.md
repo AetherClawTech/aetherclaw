@@ -121,34 +121,6 @@ Full lifecycle control for spawned subagents.
 
 Capabilities that go beyond what existing AI agent platforms offer.
 
-### MCP Server
-
-Expose AetherClaw's tools and agent capabilities via the Model Context Protocol.
-
-- [ ] stdio transport (for IDE integrations — VS Code, Cursor)
-- [ ] HTTP+SSE transport (for network clients)
-- [ ] All registered tools exposed as MCP tools
-- [ ] Agent sessions exposed as MCP resources
-- [ ] Prompt templates for common workflows
-
-### MCP Hub
-
-AetherClaw as a universal MCP bridge — expose all tools via MCP while consuming external MCP servers.
-
-- [ ] Bidirectional MCP: server + client simultaneously
-- [ ] Tool namespace management (avoid collisions between MCP sources)
-- [ ] MCP server health monitoring and auto-reconnect
-- [ ] Config-driven MCP server declarations
-
-### Plugin Architecture via MCP
-
-Replace traditional language-locked plugin SDKs with MCP servers in any language.
-
-- [ ] Python MCP servers for data science tools
-- [ ] JavaScript/TypeScript MCP servers for web tooling
-- [ ] Rust MCP servers for performance-critical operations
-- [ ] Plugin marketplace discovery and installation
-
 ### Observability
 
 Production-grade monitoring and metrics.
@@ -269,8 +241,7 @@ We welcome contributions at any phase of the roadmap. If you're interested in wo
 
 Priority areas where help is most needed:
 
-- **MCP Server** (Phase 3) — expose tools via MCP protocol
-- **Browser CDP** (Phase 2) — pure Go CDP client
+- **Browser CDP** (Phase 4) — pure Go CDP client
 - **New channels** (Phase 4) — each channel is relatively self-contained
 - **Testing** — improving coverage across all packages
 
