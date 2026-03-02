@@ -119,6 +119,11 @@ func (t *SpawnTool) SetRunRegistry(registry *RunRegistry, parentSessionKey strin
 	t.parentSessionKey = parentSessionKey
 }
 
+// SetSessionKey implements SessionKeyAware for per-request session routing.
+func (t *SpawnTool) SetSessionKey(key string) {
+	t.parentSessionKey = key
+}
+
 func (t *SpawnTool) Execute(ctx context.Context, args map[string]any) *tools.ToolResult {
 	agentID, _ := args["agent_id"].(string)
 	capability, _ := args["capability"].(string)

@@ -55,6 +55,9 @@ type AgentLoop struct {
 	mediaStore     media.MediaStore
 	cronService    *cron.CronService
 	mcpManager     *mcpclient.MCPClientManager
+	runRegistry    *multiagent.RunRegistry
+	announcer      *multiagent.Announcer
+	spawnManager   *multiagent.SpawnManager
 }
 
 // processOptions configures how a message is processed
@@ -75,8 +78,13 @@ const defaultResponse = "I've completed processing but have no response to give.
 func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers.LLMProvider) *AgentLoop {
 	registry := NewAgentRegistry(cfg, provider)
 
+	// Initialize multi-agent infrastructure
+	runRegistry := multiagent.NewRunRegistry()
+	announcer := multiagent.NewAnnouncer(32)
+	spawnManager := multiagent.NewSpawnManager(runRegistry, announcer, 5, 5*time.Minute)
+
 	// Register shared tools to all agents
-	registerSharedTools(cfg, msgBus, registry, provider)
+	registerSharedTools(cfg, msgBus, registry, provider, spawnManager, runRegistry)
 
 	// Set up shared fallback chain
 	cooldown := providers.NewCooldownTracker()
@@ -96,14 +104,17 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 	cronService := cron.NewCronService(cronStorePath, nil) // handler wired in Run()
 
 	al := &AgentLoop{
-		bus:         msgBus,
-		cfg:         cfg,
-		registry:    registry,
-		state:       stateManager,
-		summarizing: sync.Map{},
-		blackboards: newBlackboardStore(defaultBlackboardCacheSize),
-		fallback:    fallbackChain,
-		cronService: cronService,
+		bus:          msgBus,
+		cfg:          cfg,
+		registry:     registry,
+		state:        stateManager,
+		summarizing:  sync.Map{},
+		blackboards:  newBlackboardStore(defaultBlackboardCacheSize),
+		fallback:     fallbackChain,
+		cronService:  cronService,
+		runRegistry:  runRegistry,
+		announcer:    announcer,
+		spawnManager: spawnManager,
 	}
 
 	// Register extended tools that need AgentLoop reference (cron)
@@ -135,6 +146,8 @@ func registerSharedTools(
 	msgBus *bus.MessageBus,
 	registry *AgentRegistry,
 	provider providers.LLMProvider,
+	spawnManager *multiagent.SpawnManager,
+	runRegistry *multiagent.RunRegistry,
 ) {
 	workspacePath := cfg.WorkspacePath()
 	openAIKey := cfg.Providers.OpenAI.APIKey
@@ -269,22 +282,25 @@ func registerSharedTools(
 		agent.Tools.Register(tools.NewFindSkillsTool(registryMgr, searchCache))
 		agent.Tools.Register(tools.NewInstallSkillTool(registryMgr, agent.Workspace))
 
-		// Spawn tool with allowlist checker
-		subagentManager := tools.NewSubagentManager(provider, agent.Model, agent.Workspace, msgBus)
-		subagentManager.SetLLMOptions(agent.MaxTokens, agent.Temperature)
-		spawnTool := tools.NewSpawnTool(subagentManager)
-		spawnTool.SetAllowlistChecker(func(targetAgentID string) bool {
-			return registry.CanSpawnSubagent(currentAgentID, targetAgentID)
-		})
-		agent.Tools.Register(spawnTool)
-
-		// Multi-agent tools (blackboard + handoff)
+		// Multi-agent tools (blackboard + handoff + spawn + list_agents)
 		agent.Tools.Register(multiagent.NewBlackboardTool(nil, currentAgentID))
 		handoffTool := multiagent.NewHandoffTool(multiagentResolver, nil, currentAgentID)
 		handoffTool.SetAllowlistChecker(multiagent.AllowlistCheckerFunc(func(fromAgentID, toAgentID string) bool {
 			return registry.CanSpawnSubagent(fromAgentID, toAgentID)
 		}))
+		handoffTool.SetRunRegistry(runRegistry, "")
 		agent.Tools.Register(handoffTool)
+
+		// Async spawn with RunRegistry/Announcer/cascade cancellation
+		spawnTool := multiagent.NewSpawnTool(multiagentResolver, nil, spawnManager, currentAgentID)
+		spawnTool.SetAllowlistChecker(multiagent.AllowlistCheckerFunc(func(from, to string) bool {
+			return registry.CanSpawnSubagent(from, to)
+		}))
+		spawnTool.SetRunRegistry(runRegistry, "")
+		agent.Tools.Register(spawnTool)
+
+		// Agent discovery with role + capabilities
+		agent.Tools.Register(multiagent.NewListAgentsTool(multiagentResolver))
 
 		// --- New tools ---
 
@@ -471,6 +487,12 @@ func (al *AgentLoop) Run(ctx context.Context) error {
 
 func (al *AgentLoop) Stop() {
 	al.running.Store(false)
+	if al.runRegistry != nil {
+		al.runRegistry.StopAll()
+	}
+	if al.spawnManager != nil {
+		al.spawnManager.Stop()
+	}
 	if al.mcpManager != nil {
 		al.mcpManager.StopAll()
 	}
@@ -727,8 +749,8 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 		}
 	}
 
-	// 1. Update tool contexts
-	al.updateToolContexts(agent, opts.Channel, opts.ChatID)
+	// 1. Update tool contexts (channel, chatID, sessionKey, board)
+	al.updateToolContexts(agent, opts.Channel, opts.ChatID, opts.SessionKey)
 
 	// 2. Enrich user message with link content (if configured)
 	userMessage := opts.UserMessage
@@ -1172,18 +1194,42 @@ func (al *AgentLoop) runLLMIteration(
 			// Save tool result message to session
 			agent.Sessions.AddFullMessage(opts.SessionKey, toolResultMsg)
 		}
+
+		// Drain completed subagent announcements into the conversation
+		if al.announcer != nil {
+			for _, ann := range al.announcer.Drain(opts.SessionKey) {
+				messages = append(messages, providers.Message{
+					Role:    "user",
+					Content: fmt.Sprintf("[Subagent completed] %s", ann.Content),
+				})
+			}
+		}
 	}
 
 	return finalContent, iteration, nil
 }
 
-// updateToolContexts updates the context for tools that need channel/chatID info.
-func (al *AgentLoop) updateToolContexts(agent *AgentInstance, channel, chatID string) {
+// updateToolContexts updates per-request context for tools that need it:
+// channel/chatID (ContextualTool), sessionKey (SessionKeyAware), board (BoardAware).
+func (al *AgentLoop) updateToolContexts(agent *AgentInstance, channel, chatID, sessionKey string) {
+	var board *multiagent.Blackboard
+	if al.blackboards != nil && sessionKey != "" {
+		board = al.blackboards.Get(strings.TrimSpace(sessionKey))
+	}
+
 	for _, name := range agent.Tools.List() {
-		if tool, ok := agent.Tools.Get(name); ok {
-			if ct, ok := tool.(tools.ContextualTool); ok {
-				ct.SetContext(channel, chatID)
-			}
+		tool, ok := agent.Tools.Get(name)
+		if !ok {
+			continue
+		}
+		if ct, ok := tool.(tools.ContextualTool); ok {
+			ct.SetContext(channel, chatID)
+		}
+		if sk, ok := tool.(multiagent.SessionKeyAware); ok {
+			sk.SetSessionKey(sessionKey)
+		}
+		if ba, ok := tool.(multiagent.BoardAware); ok && board != nil {
+			ba.SetBoard(board)
 		}
 	}
 }

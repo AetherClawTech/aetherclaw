@@ -23,6 +23,12 @@ type BoardAware interface {
 	SetBoard(board *Blackboard)
 }
 
+// SessionKeyAware is implemented by tools that need the current session key
+// for per-request routing (announcements, cascade cancellation).
+type SessionKeyAware interface {
+	SetSessionKey(key string)
+}
+
 // Blackboard is a thread-safe shared context pool for multi-agent collaboration.
 // Agents read and write string key-value entries, each tagged with authorship
 // and scope metadata.

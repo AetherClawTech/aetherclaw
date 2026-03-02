@@ -23,13 +23,15 @@ func (r *multiagentResolver) GetAgentInfo(agentID string) *multiagent.AgentInfo 
 	return &multiagent.AgentInfo{
 		ID:   agent.ID,
 		Name: agent.Name,
+		Role: agent.Role,
 		SystemPromptFn: func() string {
 			return agent.ContextBuilder.BuildSystemPromptWithCache()
 		},
-		Model:    agent.Model,
-		Provider: agent.Provider,
-		Tools:    agent.Tools,
-		MaxIter:  agent.MaxIterations,
+		Model:        agent.Model,
+		Provider:     agent.Provider,
+		Tools:        agent.Tools,
+		MaxIter:      agent.MaxIterations,
+		Capabilities: agent.Capabilities,
 	}
 }
 

@@ -110,6 +110,11 @@ func (t *HandoffTool) SetRunRegistry(registry *RunRegistry, parentSessionKey str
 	t.parentSessionKey = parentSessionKey
 }
 
+// SetSessionKey implements SessionKeyAware for per-request session routing.
+func (t *HandoffTool) SetSessionKey(key string) {
+	t.parentSessionKey = key
+}
+
 // SetContext updates the origin channel and chat ID for handoff routing.
 func (t *HandoffTool) SetContext(channel, chatID string) {
 	t.originChannel = channel

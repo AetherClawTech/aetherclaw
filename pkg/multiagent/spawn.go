@@ -55,6 +55,7 @@ type SpawnOutcome struct {
 type SpawnManager struct {
 	registry    *RunRegistry
 	announcer   *Announcer
+	dedup       *DedupCache
 	maxChildren int
 	timeout     time.Duration
 
@@ -104,6 +105,7 @@ func NewSpawnManager(
 	return &SpawnManager{
 		registry:    registry,
 		announcer:   announcer,
+		dedup:       NewDedupCache(DefaultDedupTTL),
 		maxChildren: maxChildren,
 		timeout:     timeout,
 	}
@@ -119,6 +121,15 @@ func (sm *SpawnManager) AsyncSpawn(
 	req SpawnRequest,
 	channel, chatID string,
 ) *SpawnResult {
+	// Dedup check: prevent duplicate spawns within TTL window.
+	dedupKey := BuildSpawnKey(req.FromAgentID, req.ToAgentID, req.Task)
+	if sm.dedup != nil && sm.dedup.Check(dedupKey) {
+		return &SpawnResult{
+			Status: "rejected",
+			Error:  "duplicate spawn request (same agent/task within dedup window)",
+		}
+	}
+
 	// Generate unique run ID and session key.
 	runID := fmt.Sprintf("spawn:%s:%s:%d", req.FromAgentID, req.ToAgentID, time.Now().UnixNano())
 	childSessionKey := fmt.Sprintf(
@@ -224,6 +235,13 @@ func (sm *SpawnManager) AsyncSpawn(
 		RunID:      runID,
 		SessionKey: childSessionKey,
 		Status:     "accepted",
+	}
+}
+
+// Stop cleans up the dedup cache background goroutine.
+func (sm *SpawnManager) Stop() {
+	if sm.dedup != nil {
+		sm.dedup.Stop()
 	}
 }
 
