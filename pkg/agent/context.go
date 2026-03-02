@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/AetherClawTech/aetherclaw/pkg/logger"
+	mediautil "github.com/AetherClawTech/aetherclaw/pkg/media"
 	"github.com/AetherClawTech/aetherclaw/pkg/providers"
 	"github.com/AetherClawTech/aetherclaw/pkg/skills"
 )
@@ -465,12 +466,36 @@ func (cb *ContextBuilder) BuildMessages(
 	// Add conversation history
 	messages = append(messages, history...)
 
-	// Add current user message
+	// Add current user message (with optional multimodal content parts)
 	if strings.TrimSpace(currentMessage) != "" {
-		messages = append(messages, providers.Message{
+		userMsg := providers.Message{
 			Role:    "user",
 			Content: currentMessage,
-		})
+		}
+
+		// Convert media file paths to ContentParts for multimodal providers
+		if len(media) > 0 {
+			var contentParts []providers.ContentPart
+			// Always include the text part first
+			contentParts = append(contentParts, providers.ContentPart{
+				Type: "text",
+				Text: currentMessage,
+			})
+			for _, path := range media {
+				part, err := mediautil.FileToContentPart(path)
+				if err != nil {
+					logger.WarnCF("agent", "Failed to encode media file",
+						map[string]any{"path": path, "error": err.Error()})
+					continue
+				}
+				contentParts = append(contentParts, *part)
+			}
+			if len(contentParts) > 1 { // only set if we have at least one image
+				userMsg.ContentParts = contentParts
+			}
+		}
+
+		messages = append(messages, userMsg)
 	}
 
 	return messages

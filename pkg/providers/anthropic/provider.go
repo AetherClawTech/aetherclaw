@@ -132,6 +132,26 @@ func buildParams(
 				anthropicMessages = append(anthropicMessages,
 					anthropic.NewUserMessage(anthropic.NewToolResultBlock(msg.ToolCallID, msg.Content, false)),
 				)
+			} else if len(msg.ContentParts) > 0 {
+				// Multimodal message with text and/or images
+				var blocks []anthropic.ContentBlockParamUnion
+				for _, part := range msg.ContentParts {
+					switch part.Type {
+					case "text":
+						blocks = append(blocks, anthropic.NewTextBlock(part.Text))
+					case "image":
+						if part.Source != nil {
+							blocks = append(blocks, anthropic.NewImageBlockBase64(
+								part.Source.MediaType,
+								part.Source.Data,
+							))
+						}
+					}
+				}
+				if len(blocks) == 0 {
+					blocks = append(blocks, anthropic.NewTextBlock(msg.Content))
+				}
+				anthropicMessages = append(anthropicMessages, anthropic.NewUserMessage(blocks...))
 			} else {
 				anthropicMessages = append(anthropicMessages,
 					anthropic.NewUserMessage(anthropic.NewTextBlock(msg.Content)),

@@ -314,6 +314,10 @@ func DefaultConfig() *Config {
 					APIKey:     "",
 					MaxResults: 5,
 				},
+				LinkEnrichment: LinkEnrichmentConfig{
+					Enabled:       false,
+					MaxPerMessage: 3,
+				},
 			},
 			Cron: CronToolsConfig{
 				ExecTimeoutMinutes: 5,
@@ -343,5 +347,6 @@ func DefaultConfig() *Config {
 			Enabled:    false,
 			MonitorUSB: true,
 		},
+		MCP: MCPConfig{},
 	}
 }

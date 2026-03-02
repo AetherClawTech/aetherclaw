@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-02
+
+### Added
+
+- **Multimodal messaging**: Images from channels are now sent to LLMs as native content parts
+  - `ContentPart` and `ImageSource` types in protocol types
+  - Base64 encoding with MIME detection (JPEG, PNG, GIF, WebP) via `pkg/media/encode.go`
+  - Anthropic native image blocks (`NewImageBlockBase64`)
+  - OpenAI-compatible multimodal format with data URLs
+  - CLI provider fallback (appends `[Image: /path]` text)
+  - Media files converted to ContentParts in `BuildMessages`
+  - Media cleanup re-enabled after base64 encoding completes
+- **MCP Client**: Consume external MCP servers to extend capabilities
+  - stdio, SSE, and HTTP transport support via mcp-go v0.44.1
+  - Dynamic tool discovery and registration as `mcp_<server>_<tool>`
+  - Multi-server manager with graceful start/stop lifecycle
+  - Tools registered to all agents at startup (works with both `agent` and `gateway` commands)
+  - Config: `mcp.servers[]` with name, transport, command, args, url, env
+- **Edge TTS provider**: Free text-to-speech via Microsoft Edge WebSocket API (no API key required)
+- **Auth rotation**: Round-robin API key rotation with per-key cooldown tracking
+  - `APIKeys []string` field on `ModelConfig` for multi-key configurations
+  - Automatic `AuthRotatingProvider` wrapping when multiple keys configured
+- **Link enrichment**: `EnrichMessageWithLinks` wired into message processing pipeline
+  - Configurable via `tools.web.link_enrichment` config section
+
+### Changed
+
+- `openaiMessage.Content` changed from `string` to `any` to support multimodal content parts
+- `processOptions` now includes `Media []string` for media file paths
+- `BuildMessages` accepts media parameter and converts files to ContentParts
+
+### Dependencies
+
+- Added `github.com/mark3labs/mcp-go` v0.44.1
+
 ## [0.1.0] - 2026-03-01
 
 First release of AetherClaw as an independent project.
@@ -84,4 +119,5 @@ First release of AetherClaw as an independent project.
 - Model list with round-robin load balancing
 - Auto-migration from legacy provider config format
 
+[0.3.0]: https://github.com/AetherClawTech/aetherclaw/releases/tag/v0.3.0
 [0.1.0]: https://github.com/AetherClawTech/aetherclaw/releases/tag/v0.1.0

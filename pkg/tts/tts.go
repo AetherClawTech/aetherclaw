@@ -239,6 +239,8 @@ func isNilProvider(p Provider) bool {
 		return v == nil
 	case *ElevenLabsTTS:
 		return v == nil
+	case *EdgeTTS:
+		return v == nil
 	}
 	return false
 }

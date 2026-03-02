@@ -286,27 +286,67 @@ func parseResponse(body []byte) (*LLMResponse, error) {
 }
 
 // openaiMessage is the wire-format message for OpenAI-compatible APIs.
-// It mirrors protocoltypes.Message but omits SystemParts, which is an
-// internal field that would be unknown to third-party endpoints.
+// It mirrors protocoltypes.Message but omits SystemParts and ContentParts,
+// which are internal fields that would be unknown to third-party endpoints.
+// When ContentParts are present (multimodal), Content becomes a JSON array.
 type openaiMessage struct {
 	Role       string     `json:"role"`
-	Content    string     `json:"content"`
+	Content    any        `json:"content"` // string or []openaiContentPart for multimodal
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
+}
+
+// openaiContentPart represents a multimodal content part in the OpenAI format.
+type openaiContentPart struct {
+	Type     string             `json:"type"`
+	Text     string             `json:"text,omitempty"`
+	ImageURL *openaiImageURL    `json:"image_url,omitempty"`
+}
+
+type openaiImageURL struct {
+	URL string `json:"url"`
 }
 
 // stripSystemParts converts []Message to []openaiMessage, dropping the
 // SystemParts field so it doesn't leak into the JSON payload sent to
 // OpenAI-compatible APIs (some strict endpoints reject unknown fields).
+// When ContentParts are present, converts to OpenAI's multimodal array format.
 func stripSystemParts(messages []Message) []openaiMessage {
 	out := make([]openaiMessage, len(messages))
 	for i, m := range messages {
-		out[i] = openaiMessage{
+		msg := openaiMessage{
 			Role:       m.Role,
 			Content:    m.Content,
 			ToolCalls:  m.ToolCalls,
 			ToolCallID: m.ToolCallID,
 		}
+
+		// Convert ContentParts to OpenAI multimodal format
+		if len(m.ContentParts) > 0 && m.Role == "user" {
+			var parts []openaiContentPart
+			for _, cp := range m.ContentParts {
+				switch cp.Type {
+				case "text":
+					parts = append(parts, openaiContentPart{
+						Type: "text",
+						Text: cp.Text,
+					})
+				case "image":
+					if cp.Source != nil {
+						dataURL := fmt.Sprintf("data:%s;base64,%s", cp.Source.MediaType, cp.Source.Data)
+						parts = append(parts, openaiContentPart{
+							Type:     "image_url",
+							ImageURL: &openaiImageURL{URL: dataURL},
+						})
+					}
+				}
+			}
+			if len(parts) > 0 {
+				msg.Content = parts
+			}
+		}
+
+		out[i] = msg
 	}
 	return out
 }

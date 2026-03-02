@@ -55,6 +55,7 @@ func ExtractProtocol(model string) (protocol, modelID string) {
 // It uses the protocol prefix in the Model field to determine which provider to create.
 // Supported protocols: openai, anthropic, antigravity, claude-cli, codex-cli, github-copilot
 // Returns the provider, the model ID (without protocol prefix), and any error.
+// When multiple API keys are configured (via api_keys), creates an AuthRotatingProvider.
 func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, error) {
 	if cfg == nil {
 		return nil, "", fmt.Errorf("config is nil")
@@ -62,6 +63,29 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 
 	if cfg.Model == "" {
 		return nil, "", fmt.Errorf("model is required")
+	}
+
+	// Auth rotation: if multiple API keys are configured, create rotating provider.
+	// Only applies to HTTP-based protocols that use API keys.
+	if len(cfg.APIKeys) > 1 {
+		protocol, modelID := ExtractProtocol(cfg.Model)
+		switch protocol {
+		case "openai", "openrouter", "groq", "zhipu", "gemini", "nvidia",
+			"ollama", "moonshot", "shengsuanyun", "deepseek", "cerebras",
+			"volcengine", "vllm", "qwen", "mistral", "anthropic":
+			apiBase := cfg.APIBase
+			if apiBase == "" {
+				apiBase = getDefaultAPIBase(protocol)
+			}
+			profiles := BuildAuthProfiles(protocol, cfg.APIKeys)
+			cooldown := NewCooldownTracker()
+			provider := NewAuthRotatingProvider(profiles, cooldown, func(apiKey string) LLMProvider {
+				return NewHTTPProviderWithMaxTokensFieldAndRequestTimeout(
+					apiKey, apiBase, cfg.Proxy, cfg.MaxTokensField, cfg.RequestTimeout,
+				)
+			})
+			return provider, modelID, nil
+		}
 	}
 
 	protocol, modelID := ExtractProtocol(cfg.Model)

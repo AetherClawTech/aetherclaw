@@ -19,6 +19,8 @@ type (
 	GoogleExtra            = protocoltypes.GoogleExtra
 	ContentBlock           = protocoltypes.ContentBlock
 	CacheControl           = protocoltypes.CacheControl
+	ContentPart            = protocoltypes.ContentPart
+	ImageSource            = protocoltypes.ImageSource
 )
 
 type LLMProvider interface {

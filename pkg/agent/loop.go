@@ -26,6 +26,8 @@ import (
 	"github.com/AetherClawTech/aetherclaw/pkg/cron"
 	"github.com/AetherClawTech/aetherclaw/pkg/logger"
 	"github.com/AetherClawTech/aetherclaw/pkg/media"
+	mcptypes "github.com/AetherClawTech/aetherclaw/pkg/mcp"
+	mcpclient "github.com/AetherClawTech/aetherclaw/pkg/mcp/client"
 	"github.com/AetherClawTech/aetherclaw/pkg/memory"
 	"github.com/AetherClawTech/aetherclaw/pkg/multiagent"
 	"github.com/AetherClawTech/aetherclaw/pkg/pairing"
@@ -52,18 +54,20 @@ type AgentLoop struct {
 	channelManager *channels.Manager
 	mediaStore     media.MediaStore
 	cronService    *cron.CronService
+	mcpManager     *mcpclient.MCPClientManager
 }
 
 // processOptions configures how a message is processed
 type processOptions struct {
-	SessionKey      string // Session identifier for history/context
-	Channel         string // Target channel for tool execution
-	ChatID          string // Target chat ID for tool execution
-	UserMessage     string // User message content (may include prefix)
-	DefaultResponse string // Response when LLM returns empty
-	EnableSummary   bool   // Whether to trigger summarization
-	SendResponse    bool   // Whether to send response via bus
-	NoHistory       bool   // If true, don't load session history (for heartbeat)
+	SessionKey      string   // Session identifier for history/context
+	Channel         string   // Target channel for tool execution
+	ChatID          string   // Target chat ID for tool execution
+	UserMessage     string   // User message content (may include prefix)
+	Media           []string // Media file paths (images, etc.)
+	DefaultResponse string   // Response when LLM returns empty
+	EnableSummary   bool     // Whether to trigger summarization
+	SendResponse    bool     // Whether to send response via bus
+	NoHistory       bool     // If true, don't load session history (for heartbeat)
 }
 
 const defaultResponse = "I've completed processing but have no response to give. Increase `max_tool_iterations` in config.json."
@@ -105,6 +109,23 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 	// Register extended tools that need AgentLoop reference (cron)
 	registerExtendedTools(cfg, msgBus, registry, al)
 
+	// Start MCP clients and register their tools to all agents
+	if len(cfg.MCP.Servers) > 0 {
+		mcpConfigs := configToMCPClientConfigs(cfg.MCP.Servers)
+		al.mcpManager = mcpclient.NewMCPClientManager()
+		al.mcpManager.StartFromConfig(context.Background(), mcpConfigs)
+
+		for _, id := range registry.ListAgentIDs() {
+			if a, ok := registry.GetAgent(id); ok {
+				count := al.mcpManager.RegisterToolsTo(a.Tools)
+				if count > 0 {
+					logger.InfoCF("agent", "MCP tools registered",
+						map[string]any{"agent_id": id, "tools": count})
+				}
+			}
+		}
+	}
+
 	return al
 }
 
@@ -125,7 +146,7 @@ func registerSharedTools(
 	usageTracker := usage.NewTracker(workspacePath)
 	pairingStore := pairing.NewStore(workspacePath)
 
-	// TTS manager (OpenAI + ElevenLabs)
+	// TTS manager (OpenAI + ElevenLabs + Edge)
 	var ttsProviders []tts.Provider
 	if openAIKey != "" {
 		if p := tts.NewOpenAITTS(openAIKey); p != nil {
@@ -138,6 +159,8 @@ func registerSharedTools(
 			ttsProviders = append(ttsProviders, p)
 		}
 	}
+	// Edge TTS is always available (free, no API key required)
+	ttsProviders = append(ttsProviders, tts.NewEdgeTTS())
 	ttsOutputDir := filepath.Join(workspacePath, "tts")
 	os.MkdirAll(ttsOutputDir, 0o755)
 	ttsManager := tts.NewManager(ttsOutputDir, ttsProviders...)
@@ -373,6 +396,7 @@ func (al *AgentLoop) Run(ctx context.Context) error {
 		defer al.cronService.Stop()
 	}
 
+
 	for al.running.Load() {
 		select {
 		case <-ctx.Done():
@@ -385,18 +409,19 @@ func (al *AgentLoop) Run(ctx context.Context) error {
 
 			// Process message
 			func() {
-				// TODO: Re-enable media cleanup after inbound media is properly consumed by the agent.
-				// Currently disabled because files are deleted before the LLM can access their content.
-				// defer func() {
-				// 	if al.mediaStore != nil && msg.MediaScope != "" {
-				// 		if releaseErr := al.mediaStore.ReleaseAll(msg.MediaScope); releaseErr != nil {
-				// 			logger.WarnCF("agent", "Failed to release media", map[string]any{
-				// 				"scope": msg.MediaScope,
-				// 				"error": releaseErr.Error(),
-				// 			})
-				// 		}
-				// 	}
-				// }()
+				// Media cleanup: safe to run after processMessage returns because
+				// BuildMessages now base64-encodes images synchronously into ContentParts
+				// before any async work begins.
+				defer func() {
+					if al.mediaStore != nil && msg.MediaScope != "" {
+						if releaseErr := al.mediaStore.ReleaseAll(msg.MediaScope); releaseErr != nil {
+							logger.WarnCF("agent", "Failed to release media", map[string]any{
+								"scope": msg.MediaScope,
+								"error": releaseErr.Error(),
+							})
+						}
+					}
+				}()
 
 				response, err := al.processMessage(ctx, msg)
 				if err != nil {
@@ -446,6 +471,9 @@ func (al *AgentLoop) Run(ctx context.Context) error {
 
 func (al *AgentLoop) Stop() {
 	al.running.Store(false)
+	if al.mcpManager != nil {
+		al.mcpManager.StopAll()
+	}
 }
 
 func (al *AgentLoop) RegisterTool(tool tools.Tool) {
@@ -620,6 +648,7 @@ func (al *AgentLoop) processMessage(ctx context.Context, msg bus.InboundMessage)
 		Channel:         msg.Channel,
 		ChatID:          msg.ChatID,
 		UserMessage:     msg.Content,
+		Media:           msg.Media,
 		DefaultResponse: defaultResponse,
 		EnableSummary:   true,
 		SendResponse:    false,
@@ -701,7 +730,17 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 	// 1. Update tool contexts
 	al.updateToolContexts(agent, opts.Channel, opts.ChatID)
 
-	// 2. Build messages (skip history for heartbeat)
+	// 2. Enrich user message with link content (if configured)
+	userMessage := opts.UserMessage
+	if al.cfg.Tools.Web.LinkEnrichment.Enabled {
+		maxLinks := al.cfg.Tools.Web.LinkEnrichment.MaxPerMessage
+		if maxLinks <= 0 {
+			maxLinks = 3
+		}
+		userMessage = tools.EnrichMessageWithLinks(userMessage, maxLinks)
+	}
+
+	// 3. Build messages (skip history for heartbeat)
 	var history []providers.Message
 	var summary string
 	if !opts.NoHistory {
@@ -711,16 +750,16 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 	messages := agent.ContextBuilder.BuildMessages(
 		history,
 		summary,
-		opts.UserMessage,
-		nil,
+		userMessage,
+		opts.Media,
 		opts.Channel,
 		opts.ChatID,
 	)
 
-	// 3. Save user message to session
-	agent.Sessions.AddMessage(opts.SessionKey, "user", opts.UserMessage)
+	// 4. Save user message to session
+	agent.Sessions.AddMessage(opts.SessionKey, "user", userMessage)
 
-	// 4. Run LLM iteration loop
+	// 5. Run LLM iteration loop
 	finalContent, iteration, err := al.runLLMIteration(ctx, agent, messages, opts)
 	if err != nil {
 		return "", err
@@ -729,16 +768,16 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 	// If last tool had ForUser content and we already sent it, we might not need to send final response
 	// This is controlled by the tool's Silent flag and ForUser content
 
-	// 5. Handle empty response
+	// 6. Handle empty response
 	if finalContent == "" {
 		finalContent = opts.DefaultResponse
 	}
 
-	// 6. Save final assistant message to session
+	// 7. Save final assistant message to session
 	agent.Sessions.AddMessage(opts.SessionKey, "assistant", finalContent)
 	agent.Sessions.Save(opts.SessionKey)
 
-	// 7. Optional: summarization
+	// 8. Optional: summarization
 	if opts.EnableSummary {
 		al.maybeSummarize(agent, opts.SessionKey, opts.Channel, opts.ChatID)
 	}
@@ -1545,6 +1584,22 @@ func extractPeer(msg bus.InboundMessage) *routing.RoutePeer {
 		}
 	}
 	return &routing.RoutePeer{Kind: msg.Peer.Kind, ID: peerID}
+}
+
+// configToMCPClientConfigs converts config.MCPClientEntry to mcp.MCPClientConfig.
+func configToMCPClientConfigs(entries []config.MCPClientEntry) []mcptypes.MCPClientConfig {
+	configs := make([]mcptypes.MCPClientConfig, len(entries))
+	for i, e := range entries {
+		configs[i] = mcptypes.MCPClientConfig{
+			Name:      e.Name,
+			Transport: e.Transport,
+			Command:   e.Command,
+			Args:      e.Args,
+			URL:       e.URL,
+			Env:       e.Env,
+		}
+	}
+	return configs
 }
 
 // extractParentPeer extracts the parent peer (reply-to) from inbound message metadata.

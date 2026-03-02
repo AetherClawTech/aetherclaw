@@ -73,7 +73,14 @@ func (p *ClaudeCliProvider) messagesToPrompt(messages []Message) string {
 		case "system":
 			// handled via --system-prompt flag
 		case "user":
-			parts = append(parts, "User: "+msg.Content)
+			text := msg.Content
+			// For multimodal messages, append image references as text
+			for _, cp := range msg.ContentParts {
+				if cp.Type == "image" && cp.Source != nil && cp.Source.FilePath != "" {
+					text += fmt.Sprintf("\n[Image: %s]", cp.Source.FilePath)
+				}
+			}
+			parts = append(parts, "User: "+text)
 		case "assistant":
 			parts = append(parts, "Assistant: "+msg.Content)
 		case "tool":

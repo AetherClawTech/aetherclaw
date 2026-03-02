@@ -62,11 +62,28 @@ type ContentBlock struct {
 	CacheControl *CacheControl `json:"cache_control,omitempty"`
 }
 
+// ContentPart represents a multimodal content part (text or image).
+// Used for inbound multimodal messages (e.g., user sends image via Telegram).
+type ContentPart struct {
+	Type   string       `json:"type"`             // "text" or "image"
+	Text   string       `json:"text,omitempty"`   // text content (when Type == "text")
+	Source *ImageSource `json:"source,omitempty"` // image data (when Type == "image")
+}
+
+// ImageSource holds base64-encoded image data for multimodal messages.
+type ImageSource struct {
+	Type      string `json:"type"`       // "base64"
+	MediaType string `json:"media_type"` // e.g. "image/jpeg", "image/png"
+	Data      string `json:"data"`       // base64-encoded image data
+	FilePath  string `json:"-"`          // original file path (internal use, not serialized)
+}
+
 type Message struct {
 	Role             string         `json:"role"`
 	Content          string         `json:"content"`
 	ReasoningContent string         `json:"reasoning_content,omitempty"`
-	SystemParts      []ContentBlock `json:"system_parts,omitempty"` // structured system blocks for cache-aware adapters
+	ContentParts     []ContentPart  `json:"content_parts,omitempty"`    // multimodal content parts
+	SystemParts      []ContentBlock `json:"system_parts,omitempty"`     // structured system blocks for cache-aware adapters
 	ToolCalls        []ToolCall     `json:"tool_calls,omitempty"`
 	ToolCallID       string         `json:"tool_call_id,omitempty"`
 }

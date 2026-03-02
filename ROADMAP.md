@@ -37,38 +37,30 @@ Core capabilities that unlock real-world usage.
 
 Complete the media pipeline so images sent via messaging channels reach the LLM as multimodal content.
 
-- [ ] Wire `InboundMessage.Media` files through to `ContentParts` on user messages
-- [ ] Base64 encoding with MIME detection for HTTP providers (OpenAI/Gemini format)
-- [ ] Anthropic-native image blocks (`NewImageBlockBase64`)
-- [ ] Telegram photo/document lifecycle (stop premature cleanup)
-- [ ] CLI provider fallback (save image, reference path in prompt text)
-
-### MCP Server
-
-Expose AetherClaw's tools and agent capabilities via the Model Context Protocol.
-
-- [ ] stdio transport (for IDE integrations — VS Code, Cursor, Claude Code)
-- [ ] HTTP+SSE transport (for network clients)
-- [ ] All registered tools exposed as MCP tools
-- [ ] Agent sessions exposed as MCP resources
-- [ ] Prompt templates for common workflows
+- [x] Wire `InboundMessage.Media` files through to `ContentParts` on user messages
+- [x] Base64 encoding with MIME detection for HTTP providers (OpenAI/Gemini format)
+- [x] Anthropic-native image blocks (`NewImageBlockBase64`)
+- [x] Telegram photo/document lifecycle (stop premature cleanup)
+- [x] CLI provider fallback (save image, reference path in prompt text)
 
 ### MCP Client
 
 Consume external MCP servers to extend AetherClaw's capabilities without writing Go code.
 
-- [ ] stdio transport (launch local MCP server processes)
-- [ ] HTTP+SSE transport (connect to remote MCP servers)
-- [ ] Dynamic tool discovery and registration
-- [ ] Per-agent MCP server configuration
-- [ ] Graceful lifecycle management (start/stop/restart)
+- [x] stdio transport (launch local MCP server processes)
+- [x] HTTP+SSE transport (connect to remote MCP servers)
+- [x] Dynamic tool discovery and registration
+- [x] Automatic tool registration to all agents at startup
+- [x] Graceful lifecycle management (start/stop with agent loop)
+- [ ] MCP server health monitoring and auto-reconnect
+- [ ] Per-agent MCP server filtering
 
 ### Quick Wins
 
-- [ ] Wire `EnrichMessageWithLinks` into the message processing pipeline
+- [x] Wire `EnrichMessageWithLinks` into the message processing pipeline
 - [ ] Register `BlackboardTool` and `HandoffTool` from the multiagent package
-- [ ] Wire auth rotation into the provider factory (round-robin multi-key with cooldown)
-- [ ] Add Edge TTS provider (free, no API key required)
+- [x] Wire auth rotation into the provider factory (round-robin multi-key with cooldown)
+- [x] Add Edge TTS provider (free, no API key required)
 
 ---
 
@@ -126,6 +118,16 @@ Full lifecycle control for spawned subagents.
 ## Phase 3 — Surpass
 
 Capabilities that go beyond what existing AI agent platforms offer.
+
+### MCP Server
+
+Expose AetherClaw's tools and agent capabilities via the Model Context Protocol.
+
+- [ ] stdio transport (for IDE integrations — VS Code, Cursor)
+- [ ] HTTP+SSE transport (for network clients)
+- [ ] All registered tools exposed as MCP tools
+- [ ] Agent sessions exposed as MCP resources
+- [ ] Prompt templates for common workflows
 
 ### MCP Hub
 
@@ -265,7 +267,7 @@ We welcome contributions at any phase of the roadmap. If you're interested in wo
 
 Priority areas where help is most needed:
 
-- **MCP implementation** (Phase 1) — the highest-impact differentiator
+- **MCP Server** (Phase 3) — expose tools via MCP protocol
 - **Browser CDP** (Phase 2) — pure Go CDP client
 - **New channels** (Phase 4) — each channel is relatively self-contained
 - **Testing** — improving coverage across all packages

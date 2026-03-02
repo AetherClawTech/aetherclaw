@@ -58,6 +58,22 @@ type Config struct {
 	Tools     ToolsConfig     `json:"tools"`
 	Heartbeat HeartbeatConfig `json:"heartbeat"`
 	Devices   DevicesConfig   `json:"devices"`
+	MCP       MCPConfig       `json:"mcp,omitempty"`
+}
+
+// MCPConfig holds MCP client configuration for consuming external MCP servers.
+type MCPConfig struct {
+	Servers []MCPClientEntry `json:"servers,omitempty"`
+}
+
+// MCPClientEntry configures a connection to an external MCP server.
+type MCPClientEntry struct {
+	Name      string            `json:"name"`
+	Transport string            `json:"transport"`
+	Command   string            `json:"command,omitempty"`
+	Args      []string          `json:"args,omitempty"`
+	URL       string            `json:"url,omitempty"`
+	Env       map[string]string `json:"env,omitempty"`
 }
 
 // MarshalJSON implements custom JSON marshaling for Config
@@ -461,9 +477,10 @@ type ModelConfig struct {
 	Model     string `json:"model"`      // Protocol/model-identifier (e.g., "openai/gpt-4o", "anthropic/claude-sonnet-4.6")
 
 	// HTTP-based providers
-	APIBase string `json:"api_base,omitempty"` // API endpoint URL
-	APIKey  string `json:"api_key"`            // API authentication key
-	Proxy   string `json:"proxy,omitempty"`    // HTTP proxy URL
+	APIBase string   `json:"api_base,omitempty"` // API endpoint URL
+	APIKey  string   `json:"api_key"`            // API authentication key
+	APIKeys []string `json:"api_keys,omitempty"` // Multiple API keys for auth rotation
+	Proxy   string   `json:"proxy,omitempty"`    // HTTP proxy URL
 
 	// Special providers (CLI-based, OAuth, etc.)
 	AuthMethod  string `json:"auth_method,omitempty"`  // Authentication method: oauth, token
@@ -516,11 +533,18 @@ type PerplexityConfig struct {
 	MaxResults int    `json:"max_results" env:"AETHERCLAW_TOOLS_WEB_PERPLEXITY_MAX_RESULTS"`
 }
 
+// LinkEnrichmentConfig controls automatic link content extraction in user messages.
+type LinkEnrichmentConfig struct {
+	Enabled       bool `json:"enabled"         env:"AETHERCLAW_TOOLS_WEB_LINK_ENRICHMENT_ENABLED"`
+	MaxPerMessage int  `json:"max_per_message" env:"AETHERCLAW_TOOLS_WEB_LINK_ENRICHMENT_MAX_PER_MESSAGE"`
+}
+
 type WebToolsConfig struct {
-	Brave      BraveConfig      `json:"brave"`
-	Tavily     TavilyConfig     `json:"tavily"`
-	DuckDuckGo DuckDuckGoConfig `json:"duckduckgo"`
-	Perplexity PerplexityConfig `json:"perplexity"`
+	Brave          BraveConfig          `json:"brave"`
+	Tavily         TavilyConfig         `json:"tavily"`
+	DuckDuckGo     DuckDuckGoConfig     `json:"duckduckgo"`
+	Perplexity     PerplexityConfig     `json:"perplexity"`
+	LinkEnrichment LinkEnrichmentConfig `json:"link_enrichment"`
 	// Proxy is an optional proxy URL for web tools (http/https/socks5/socks5h).
 	// For authenticated proxies, prefer HTTP_PROXY/HTTPS_PROXY env vars instead of embedding credentials in config.
 	Proxy string `json:"proxy,omitempty" env:"AETHERCLAW_TOOLS_WEB_PROXY"`

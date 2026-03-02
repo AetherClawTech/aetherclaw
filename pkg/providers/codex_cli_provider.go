@@ -97,7 +97,14 @@ func (p *CodexCliProvider) buildPrompt(messages []Message, tools []ToolDefinitio
 		case "system":
 			systemParts = append(systemParts, msg.Content)
 		case "user":
-			conversationParts = append(conversationParts, msg.Content)
+			text := msg.Content
+			// For multimodal messages, append image references as text
+			for _, cp := range msg.ContentParts {
+				if cp.Type == "image" && cp.Source != nil && cp.Source.FilePath != "" {
+					text += fmt.Sprintf("\n[Image: %s]", cp.Source.FilePath)
+				}
+			}
+			conversationParts = append(conversationParts, text)
 		case "assistant":
 			conversationParts = append(conversationParts, "Assistant: "+msg.Content)
 		case "tool":
