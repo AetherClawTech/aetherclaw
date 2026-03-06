@@ -116,6 +116,41 @@ func (c *MCPClient) Stop() error {
 	return nil
 }
 
+// Ping checks if the MCP server is alive.
+func (c *MCPClient) Ping(ctx context.Context) error {
+	if c.client == nil {
+		return fmt.Errorf("client not connected")
+	}
+	return c.client.Ping(ctx)
+}
+
+// Reconnect stops the current client and starts a fresh connection.
+func (c *MCPClient) Reconnect(ctx context.Context) error {
+	_ = c.Stop()
+	c.client = nil
+	c.tools = nil
+	return c.Start(ctx)
+}
+
+// Config returns the client config.
+func (c *MCPClient) Config() mcptypes.MCPClientConfig {
+	return c.cfg
+}
+
+// AllowsAgent returns true if this server's tools should be registered to the given agent.
+// Empty agents list means allow all.
+func (c *MCPClient) AllowsAgent(agentID string) bool {
+	if len(c.cfg.Agents) == 0 {
+		return true
+	}
+	for _, a := range c.cfg.Agents {
+		if a == agentID {
+			return true
+		}
+	}
+	return false
+}
+
 // ToolPrefix returns the prefix used for tool names from this server.
 func (c *MCPClient) ToolPrefix() string {
 	return "mcp_" + sanitizeName(c.cfg.Name) + "_"

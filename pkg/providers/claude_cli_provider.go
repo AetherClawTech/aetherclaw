@@ -5,14 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
 
 // ClaudeCliProvider implements LLMProvider using the claude CLI as a subprocess.
 type ClaudeCliProvider struct {
-	command   string
-	workspace string
+	command    string
+	workspace  string
+	mcpConfigs []MCPProviderConfig
 }
 
 // NewClaudeCliProvider creates a new Claude CLI provider.
@@ -21,6 +23,11 @@ func NewClaudeCliProvider(workspace string) *ClaudeCliProvider {
 		command:   "claude",
 		workspace: workspace,
 	}
+}
+
+// SetMCPConfigs sets MCP server configurations for CLI passthrough.
+func (p *ClaudeCliProvider) SetMCPConfigs(configs []MCPProviderConfig) {
+	p.mcpConfigs = configs
 }
 
 // Chat implements LLMProvider.Chat by executing the claude CLI.
@@ -37,7 +44,19 @@ func (p *ClaudeCliProvider) Chat(
 	if model != "" && model != "claude-code" {
 		args = append(args, "--model", model)
 	}
+
 	args = append(args, "-") // read from stdin
+
+	// Inject MCP config AFTER "-" because --mcp-config is variadic
+	// and would consume "-" as another config path if placed before it.
+	if len(p.mcpConfigs) > 0 {
+		mcpConfigPath, err := p.writeMCPConfigFile()
+		if err != nil {
+			return nil, fmt.Errorf("failed to write MCP config: %w", err)
+		}
+		defer os.Remove(mcpConfigPath)
+		args = append(args, "--mcp-config", mcpConfigPath)
+	}
 
 	cmd := exec.CommandContext(ctx, p.command, args...)
 	if p.workspace != "" {
@@ -57,6 +76,40 @@ func (p *ClaudeCliProvider) Chat(
 	}
 
 	return p.parseClaudeCliResponse(stdout.String())
+}
+
+// writeMCPConfigFile creates a temporary JSON file in Claude Code's MCP config format.
+func (p *ClaudeCliProvider) writeMCPConfigFile() (string, error) {
+	servers := make(map[string]any, len(p.mcpConfigs))
+	for _, cfg := range p.mcpConfigs {
+		entry := map[string]any{
+			"command": cfg.Command,
+		}
+		if len(cfg.Args) > 0 {
+			entry["args"] = cfg.Args
+		}
+		if len(cfg.Env) > 0 {
+			entry["env"] = cfg.Env
+		}
+		servers[cfg.Name] = entry
+	}
+
+	data, err := json.Marshal(map[string]any{"mcpServers": servers})
+	if err != nil {
+		return "", fmt.Errorf("marshal MCP config: %w", err)
+	}
+
+	f, err := os.CreateTemp("", "aetherclaw-mcp-*.json")
+	if err != nil {
+		return "", fmt.Errorf("create temp MCP config file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := f.Write(data); err != nil {
+		os.Remove(f.Name())
+		return "", fmt.Errorf("write MCP config file: %w", err)
+	}
+	return f.Name(), nil
 }
 
 // GetDefaultModel returns the default model identifier.

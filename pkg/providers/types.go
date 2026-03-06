@@ -76,6 +76,21 @@ func (e *FailoverError) IsRetriable() bool {
 	return e.Reason != FailoverFormat
 }
 
+// MCPConfigurable is implemented by providers that can receive MCP server
+// configurations to pass to their CLI subprocess (e.g., claude-cli, codex-cli).
+type MCPConfigurable interface {
+	SetMCPConfigs(configs []MCPProviderConfig)
+}
+
+// MCPProviderConfig is a minimal MCP server config passed to CLI providers.
+// Only stdio transport is supported for CLI passthrough.
+type MCPProviderConfig struct {
+	Name    string            `json:"name"`
+	Command string            `json:"command"`
+	Args    []string          `json:"args,omitempty"`
+	Env     map[string]string `json:"env,omitempty"`
+}
+
 // ModelConfig holds primary model and fallback list.
 type ModelConfig struct {
 	Primary   string

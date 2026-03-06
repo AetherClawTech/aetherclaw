@@ -8,4 +8,5 @@ type MCPClientConfig struct {
 	Args      []string          `json:"args,omitempty"`    // for stdio: command arguments
 	URL       string            `json:"url,omitempty"`     // for sse/http: server URL
 	Env       map[string]string `json:"env,omitempty"`     // environment variables for stdio subprocess
+	Agents    []string          `json:"agents,omitempty"`  // restrict tools to these agent IDs; empty = all
 }
