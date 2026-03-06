@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-03-06
+
+### Added
+
+- **Synthetic Teams Core**: Foundation for OpenCrew-style synthetic developer teams
+  - Autonomy Ladder (L0-L3) with ToolHook-based enforcement
+    - L0=observe, L1=reversible, L2=recoverable, L3=irreversible
+    - 27+ tools classified by default, customizable per-agent
+    - ApprovalRequester interface for escalation flow
+  - AllowlistChecker interface for agent-to-agent ACL enforcement
+    - Enforced in both handoff and spawn paths
+    - Nil checker defaults to allow-all (backwards compatible)
+  - TeamConfig with 3-layer hierarchy (Intent/Execution/Maintenance)
+    - A2AConfig for circuit breaker limits and WAIT discipline
+    - DefaultA2AConfig() with sensible defaults
+  - Thread-bound subagents via ReplyToChannel/ReplyToThread on SpawnRequest
+  - Autonomy level wiring from agent config into agent loop
+- **MCP Client Enhancements**: Extended MCP client capabilities
+  - Tool discovery and session lifecycle management
+  - Health checks and auto-reconnect in MCP manager
+  - Tool aggregation across multiple MCP servers
+  - Claude CLI provider: MCP tool passthrough
+  - Codex CLI provider: MCP tool passthrough
+  - Provider MCP capability interface
+- **Test Infrastructure**
+  - Mock MCP stdio server for integration testing (echo + device control tools)
+  - E2E integration tests for multi-agent system
+  - 22 new tests for synthetic teams features
+  - MCP integration tests for provider tool flows
+
+### Changed
+
+- `AgentConfig` now supports optional `Autonomy *int` field
+- `Config` struct includes `Teams map[string]TeamConfig`
+- `HandoffRequest` and `SpawnRequest` include `AllowlistChecker` field
+- `SpawnRequest/SpawnOutcome/Announcement` include thread routing fields
+
 ## [0.3.0] - 2026-03-02
 
 ### Added
@@ -119,5 +156,6 @@ First release of AetherClaw as an independent project.
 - Model list with round-robin load balancing
 - Auto-migration from legacy provider config format
 
+[0.4.0]: https://github.com/AetherClawTech/aetherclaw/releases/tag/v0.4.0
 [0.3.0]: https://github.com/AetherClawTech/aetherclaw/releases/tag/v0.3.0
 [0.1.0]: https://github.com/AetherClawTech/aetherclaw/releases/tag/v0.1.0
