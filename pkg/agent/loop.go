@@ -120,7 +120,7 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 	// Register extended tools that need AgentLoop reference (cron)
 	registerExtendedTools(cfg, msgBus, registry, al)
 
-	// Start MCP clients and register their tools to all agents
+	// Start MCP clients and register their tools to agents (respecting per-agent filtering)
 	if len(cfg.MCP.Servers) > 0 {
 		mcpConfigs := configToMCPClientConfigs(cfg.MCP.Servers)
 		al.mcpManager = mcpclient.NewMCPClientManager()
@@ -128,10 +128,32 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 
 		for _, id := range registry.ListAgentIDs() {
 			if a, ok := registry.GetAgent(id); ok {
-				count := al.mcpManager.RegisterToolsTo(a.Tools)
+				count := al.mcpManager.RegisterToolsToAgent(id, a.Tools)
 				if count > 0 {
 					logger.InfoCF("agent", "MCP tools registered",
 						map[string]any{"agent_id": id, "tools": count})
+				}
+			}
+		}
+
+		al.mcpManager.StartHealthMonitor(registry)
+
+		// Inject MCP configs into CLI providers for native passthrough.
+		// Takes the union of all stdio MCP servers — CLI providers get all of them
+		// since per-agent filtering isn't possible when agents share a provider instance.
+		allMCPConfigs := buildCLIMCPProviderConfigs(cfg.MCP.Servers)
+		if len(allMCPConfigs) > 0 {
+			injected := make(map[providers.MCPConfigurable]bool)
+			for _, id := range registry.ListAgentIDs() {
+				agent, ok := registry.GetAgent(id)
+				if !ok {
+					continue
+				}
+				if configurable, ok := agent.Provider.(providers.MCPConfigurable); ok && !injected[configurable] {
+					configurable.SetMCPConfigs(allMCPConfigs)
+					injected[configurable] = true
+					logger.InfoCF("agent", "MCP configs injected into CLI provider",
+						map[string]any{"agent_id": id, "mcp_servers": len(allMCPConfigs)})
 				}
 			}
 		}
@@ -355,6 +377,16 @@ func registerSharedTools(
 
 		// Loop detector hook (prevents infinite tool loops)
 		agent.Tools.AddHook(loopDetector)
+
+		// Autonomy hook (enforces per-agent autonomy levels)
+		autonomyLevel := tools.L1_Reversible // default
+		for _, ac := range cfg.Agents.List {
+			if ac.ID == currentAgentID && ac.Autonomy != nil {
+				autonomyLevel = tools.AutonomyLevel(*ac.Autonomy)
+				break
+			}
+		}
+		agent.Tools.AddHook(tools.NewAutonomyHook(currentAgentID, autonomyLevel, nil))
 	}
 }
 
@@ -1632,6 +1664,23 @@ func extractPeer(msg bus.InboundMessage) *routing.RoutePeer {
 	return &routing.RoutePeer{Kind: msg.Peer.Kind, ID: peerID}
 }
 
+// buildCLIMCPProviderConfigs extracts stdio MCP server entries for CLI provider passthrough.
+func buildCLIMCPProviderConfigs(entries []config.MCPClientEntry) []providers.MCPProviderConfig {
+	var configs []providers.MCPProviderConfig
+	for _, e := range entries {
+		if e.Transport != "stdio" {
+			continue
+		}
+		configs = append(configs, providers.MCPProviderConfig{
+			Name:    e.Name,
+			Command: e.Command,
+			Args:    e.Args,
+			Env:     e.Env,
+		})
+	}
+	return configs
+}
+
 // configToMCPClientConfigs converts config.MCPClientEntry to mcp.MCPClientConfig.
 func configToMCPClientConfigs(entries []config.MCPClientEntry) []mcptypes.MCPClientConfig {
 	configs := make([]mcptypes.MCPClientConfig, len(entries))
@@ -1643,6 +1692,7 @@ func configToMCPClientConfigs(entries []config.MCPClientEntry) []mcptypes.MCPCli
 			Args:      e.Args,
 			URL:       e.URL,
 			Env:       e.Env,
+			Agents:    e.Agents,
 		}
 	}
 	return configs

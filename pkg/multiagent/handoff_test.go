@@ -904,6 +904,76 @@ func (s *simpleTool) Execute(_ context.Context, _ map[string]any) *tools.ToolRes
 	return tools.NewToolResult("ok")
 }
 
+// TestExecuteHandoff_ACL_Blocked verifies that ExecuteHandoff enforces AllowlistChecker.
+func TestExecuteHandoff_ACL_Blocked(t *testing.T) {
+	provider := &mockProvider{response: "done"}
+	resolver := newMockResolver(&AgentInfo{
+		ID: "target", Name: "Target", Model: "test",
+		Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5,
+	})
+
+	bb := NewBlackboard()
+	result := ExecuteHandoff(context.Background(), resolver, bb, HandoffRequest{
+		FromAgentID: "cto",
+		ToAgentID:   "target",
+		Task:        "deploy to production",
+		AllowlistChecker: AllowlistCheckerFunc(func(from, to string) bool {
+			return false // deny all
+		}),
+	}, "cli", "direct")
+
+	if result.Success {
+		t.Error("expected failure when ACL blocks handoff")
+	}
+	if !strings.Contains(result.Error, "not allowed") {
+		t.Errorf("Error = %q, expected 'not allowed'", result.Error)
+	}
+}
+
+// TestExecuteHandoff_ACL_Allowed verifies that ACL check passes for permitted handoffs.
+func TestExecuteHandoff_ACL_Allowed(t *testing.T) {
+	provider := &mockProvider{response: "permitted result"}
+	resolver := newMockResolver(&AgentInfo{
+		ID: "builder", Name: "Builder", Model: "test",
+		Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5,
+	})
+
+	bb := NewBlackboard()
+	result := ExecuteHandoff(context.Background(), resolver, bb, HandoffRequest{
+		FromAgentID: "cto",
+		ToAgentID:   "builder",
+		Task:        "write code",
+		AllowlistChecker: AllowlistCheckerFunc(func(from, to string) bool {
+			return from == "cto" && to == "builder"
+		}),
+	}, "cli", "direct")
+
+	if !result.Success {
+		t.Fatalf("expected success, got error: %s", result.Error)
+	}
+}
+
+// TestExecuteHandoff_ACL_NilAllowsAll verifies that nil AllowlistChecker allows all.
+func TestExecuteHandoff_ACL_NilAllowsAll(t *testing.T) {
+	provider := &mockProvider{response: "ok"}
+	resolver := newMockResolver(&AgentInfo{
+		ID: "target", Name: "Target", Model: "test",
+		Provider: provider, Tools: tools.NewToolRegistry(), MaxIter: 5,
+	})
+
+	bb := NewBlackboard()
+	result := ExecuteHandoff(context.Background(), resolver, bb, HandoffRequest{
+		FromAgentID:      "main",
+		ToAgentID:        "target",
+		Task:             "anything",
+		AllowlistChecker: nil, // no checker
+	}, "cli", "direct")
+
+	if !result.Success {
+		t.Fatalf("nil checker should allow all, got error: %s", result.Error)
+	}
+}
+
 func TestBuildHandoffSystemPrompt(t *testing.T) {
 	agent := &AgentInfo{
 		Name:         "Code Agent",

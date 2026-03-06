@@ -415,6 +415,117 @@ func TestAnnouncer_ConcurrentDelivery(t *testing.T) {
 	}
 }
 
+// TestAsyncSpawn_ACL_Denied verifies that ACL check blocks spawn.
+func TestAsyncSpawn_ACL_Denied(t *testing.T) {
+	registry := NewRunRegistry()
+	announcer := NewAnnouncer(10)
+	sm := NewSpawnManager(registry, announcer, 5, 10*time.Second)
+	resolver := newTestResolver()
+	board := NewBlackboard()
+
+	result := sm.AsyncSpawn(context.Background(), resolver, board, SpawnRequest{
+		FromAgentID:  "main",
+		ToAgentID:    "worker-a",
+		Task:         "do something",
+		ParentRunKey: "parent",
+		AllowlistChecker: AllowlistCheckerFunc(func(from, to string) bool {
+			return false // deny all
+		}),
+	}, "test", "chat1")
+
+	if result.Status != "denied" {
+		t.Errorf("expected denied, got %s: %s", result.Status, result.Error)
+	}
+}
+
+// TestAsyncSpawn_ACL_NilAllowsAll verifies that nil checker allows spawn.
+func TestAsyncSpawn_ACL_NilAllowsAll(t *testing.T) {
+	registry := NewRunRegistry()
+	announcer := NewAnnouncer(10)
+	sm := NewSpawnManager(registry, announcer, 5, 10*time.Second)
+	resolver := newTestResolver()
+	board := NewBlackboard()
+
+	result := sm.AsyncSpawn(context.Background(), resolver, board, SpawnRequest{
+		FromAgentID:      "main",
+		ToAgentID:        "worker-a",
+		Task:             "do something",
+		ParentRunKey:     "parent",
+		AllowlistChecker: nil,
+	}, "test", "chat1")
+
+	if result.Status != "accepted" {
+		t.Errorf("nil checker should accept, got %s: %s", result.Status, result.Error)
+	}
+	time.Sleep(200 * time.Millisecond) // wait for goroutine cleanup
+}
+
+// TestAsyncSpawn_ThreadBound verifies ReplyToChannel/Thread propagate to Announcement.
+func TestAsyncSpawn_ThreadBound(t *testing.T) {
+	registry := NewRunRegistry()
+	announcer := NewAnnouncer(10)
+	sm := NewSpawnManager(registry, announcer, 5, 10*time.Second)
+	resolver := newTestResolver()
+	board := NewBlackboard()
+
+	sm.AsyncSpawn(context.Background(), resolver, board, SpawnRequest{
+		FromAgentID:    "main",
+		ToAgentID:      "worker-a",
+		Task:           "thread-bound task",
+		ParentRunKey:   "parent",
+		ReplyToChannel: "discord-123",
+		ReplyToThread:  "thread-456",
+	}, "test", "chat1")
+
+	time.Sleep(200 * time.Millisecond)
+
+	anns := announcer.Drain("parent")
+	if len(anns) == 0 {
+		t.Fatal("expected announcement")
+	}
+	if anns[0].ReplyToChannel != "discord-123" {
+		t.Errorf("ReplyToChannel = %q, want 'discord-123'", anns[0].ReplyToChannel)
+	}
+	if anns[0].ReplyToThread != "thread-456" {
+		t.Errorf("ReplyToThread = %q, want 'thread-456'", anns[0].ReplyToThread)
+	}
+	if anns[0].Outcome.ReplyToChannel != "discord-123" {
+		t.Errorf("Outcome.ReplyToChannel = %q, want 'discord-123'", anns[0].Outcome.ReplyToChannel)
+	}
+	if anns[0].Outcome.ReplyToThread != "thread-456" {
+		t.Errorf("Outcome.ReplyToThread = %q, want 'thread-456'", anns[0].Outcome.ReplyToThread)
+	}
+}
+
+// TestAsyncSpawn_NoThread verifies backwards compatibility when no thread is set.
+func TestAsyncSpawn_NoThread(t *testing.T) {
+	registry := NewRunRegistry()
+	announcer := NewAnnouncer(10)
+	sm := NewSpawnManager(registry, announcer, 5, 10*time.Second)
+	resolver := newTestResolver()
+	board := NewBlackboard()
+
+	sm.AsyncSpawn(context.Background(), resolver, board, SpawnRequest{
+		FromAgentID:  "main",
+		ToAgentID:    "worker-a",
+		Task:         "no-thread task",
+		ParentRunKey: "parent",
+	}, "test", "chat1")
+
+	time.Sleep(200 * time.Millisecond)
+
+	anns := announcer.Drain("parent")
+	if len(anns) == 0 {
+		t.Fatal("expected announcement")
+	}
+	if anns[0].ReplyToChannel != "" {
+		t.Errorf("ReplyToChannel should be empty, got %q", anns[0].ReplyToChannel)
+	}
+	if anns[0].ReplyToThread != "" {
+		t.Errorf("ReplyToThread should be empty, got %q", anns[0].ReplyToThread)
+	}
+}
+
 func TestAnnouncer_Cleanup(t *testing.T) {
 	a := NewAnnouncer(10)
 	a.Deliver("session-1", &Announcement{RunID: "r1"})

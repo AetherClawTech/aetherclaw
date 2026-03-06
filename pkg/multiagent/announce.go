@@ -31,6 +31,8 @@ type Announcement struct {
 	Outcome        *SpawnOutcome
 	Mode           AnnounceMode
 	CreatedAt      time.Time
+	ReplyToChannel string // optional: route to specific channel (for Discord/Slack hooks)
+	ReplyToThread  string // optional: route to specific thread
 }
 
 // Announcer manages per-session announcement delivery using Go channels

@@ -19,14 +19,17 @@ const (
 
 // SpawnRequest describes an async agent invocation.
 type SpawnRequest struct {
-	FromAgentID  string
-	ToAgentID    string
-	Task         string
-	Context      map[string]string // k-v to write to blackboard
-	Depth        int
-	Visited      []string
-	MaxDepth     int
-	ParentRunKey string
+	FromAgentID      string
+	ToAgentID        string
+	Task             string
+	Context          map[string]string // k-v to write to blackboard
+	Depth            int
+	Visited          []string
+	MaxDepth         int
+	ParentRunKey     string
+	ReplyToChannel   string           // optional: route response to specific channel
+	ReplyToThread    string           // optional: route response to specific thread
+	AllowlistChecker AllowlistChecker // optional ACL checker; nil = allow all
 }
 
 // SpawnResult is returned immediately to the caller (fire-and-forget).
@@ -39,14 +42,16 @@ type SpawnResult struct {
 
 // SpawnOutcome is the final result written to the announcer when the spawn completes.
 type SpawnOutcome struct {
-	RunID      string
-	SessionKey string
-	AgentID    string
-	Content    string
-	Iterations int
-	Success    bool
-	Error      string
-	Duration   time.Duration
+	RunID          string
+	SessionKey     string
+	AgentID        string
+	Content        string
+	Iterations     int
+	Success        bool
+	Error          string
+	Duration       time.Duration
+	ReplyToChannel string // propagated from SpawnRequest
+	ReplyToThread  string // propagated from SpawnRequest
 }
 
 // SpawnManager orchestrates async agent spawns with concurrency limiting
@@ -121,6 +126,14 @@ func (sm *SpawnManager) AsyncSpawn(
 	req SpawnRequest,
 	channel, chatID string,
 ) *SpawnResult {
+	// ACL enforcement: check if spawn is allowed by policy
+	if req.AllowlistChecker != nil && !req.AllowlistChecker.CanHandoff(req.FromAgentID, req.ToAgentID) {
+		return &SpawnResult{
+			Status: "denied",
+			Error:  fmt.Sprintf("agent %q not allowed to spawn %q", req.FromAgentID, req.ToAgentID),
+		}
+	}
+
 	// Dedup check: prevent duplicate spawns within TTL window.
 	dedupKey := BuildSpawnKey(req.FromAgentID, req.ToAgentID, req.Task)
 	if sm.dedup != nil && sm.dedup.Check(dedupKey) {
@@ -200,14 +213,16 @@ func (sm *SpawnManager) AsyncSpawn(
 		}, channel, chatID)
 
 		outcome := &SpawnOutcome{
-			RunID:      runID,
-			SessionKey: childSessionKey,
-			AgentID:    req.ToAgentID,
-			Content:    result.Content,
-			Iterations: result.Iterations,
-			Success:    result.Success,
-			Error:      result.Error,
-			Duration:   time.Since(start),
+			RunID:          runID,
+			SessionKey:     childSessionKey,
+			AgentID:        req.ToAgentID,
+			Content:        result.Content,
+			Iterations:     result.Iterations,
+			Success:        result.Success,
+			Error:          result.Error,
+			Duration:       time.Since(start),
+			ReplyToChannel: req.ReplyToChannel,
+			ReplyToThread:  req.ReplyToThread,
 		}
 
 		// Push result to parent via Announcer (Anthropic's auto-announce pattern).
@@ -219,6 +234,8 @@ func (sm *SpawnManager) AsyncSpawn(
 				AgentID:        req.ToAgentID,
 				Content:        formatOutcomeMessage(outcome),
 				Outcome:        outcome,
+				ReplyToChannel: req.ReplyToChannel,
+				ReplyToThread:  req.ReplyToThread,
 			})
 		}
 

@@ -93,6 +93,14 @@ func (t *SpawnTool) Parameters() map[string]any {
 				"type":        "object",
 				"description": "Optional key-value context to share via blackboard",
 			},
+			"reply_to_channel": map[string]any{
+				"type":        "string",
+				"description": "Optional channel ID to route the response to (e.g., Discord channel)",
+			},
+			"reply_to_thread": map[string]any{
+				"type":        "string",
+				"description": "Optional thread ID to route the response to (e.g., Discord thread)",
+			},
 		},
 		"required": []string{"task"},
 	}
@@ -164,15 +172,20 @@ func (t *SpawnTool) Execute(ctx context.Context, args map[string]any) *tools.Too
 		board = ctxBoard
 	}
 
+	replyToChannel, _ := args["reply_to_channel"].(string)
+	replyToThread, _ := args["reply_to_thread"].(string)
+
 	result := t.spawnManager.AsyncSpawn(ctx, t.resolver, board, SpawnRequest{
-		FromAgentID:  t.fromAgentID,
-		ToAgentID:    agentID,
-		Task:         task,
-		Context:      contextMap,
-		Depth:        t.depth,
-		Visited:      t.visited,
-		MaxDepth:     t.maxDepth,
-		ParentRunKey: t.parentSessionKey,
+		FromAgentID:    t.fromAgentID,
+		ToAgentID:      agentID,
+		Task:           task,
+		Context:        contextMap,
+		Depth:          t.depth,
+		Visited:        t.visited,
+		MaxDepth:       t.maxDepth,
+		ParentRunKey:   t.parentSessionKey,
+		ReplyToChannel: replyToChannel,
+		ReplyToThread:  replyToThread,
 	}, t.originChannel, t.originChatID)
 
 	if result.Status != "accepted" {

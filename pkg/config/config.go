@@ -59,6 +59,7 @@ type Config struct {
 	Heartbeat HeartbeatConfig `json:"heartbeat"`
 	Devices   DevicesConfig   `json:"devices"`
 	MCP       MCPConfig       `json:"mcp,omitempty"`
+	Teams     map[string]TeamConfig `json:"teams,omitempty"`
 }
 
 // MCPConfig holds MCP client configuration for consuming external MCP servers.
@@ -74,6 +75,7 @@ type MCPClientEntry struct {
 	Args      []string          `json:"args,omitempty"`
 	URL       string            `json:"url,omitempty"`
 	Env       map[string]string `json:"env,omitempty"`
+	Agents    []string          `json:"agents,omitempty"` // restrict tools to these agent IDs; empty = all
 }
 
 // MarshalJSON implements custom JSON marshaling for Config
@@ -155,6 +157,7 @@ type AgentConfig struct {
 	Model        *AgentModelConfig `json:"model,omitempty"`
 	Skills       []string          `json:"skills,omitempty"`
 	Subagents    *SubagentsConfig  `json:"subagents,omitempty"`
+	Autonomy     *int              `json:"autonomy,omitempty"` // Autonomy level (0-3). nil defaults to L1 (reversible).
 }
 
 type SubagentsConfig struct {

@@ -61,14 +61,15 @@ const DefaultMaxHandoffDepth = 3
 
 // HandoffRequest describes a delegation from one agent to another.
 type HandoffRequest struct {
-	FromAgentID  string
-	ToAgentID    string
-	Task         string
-	Context      map[string]string // k-v to write to blackboard before handoff
-	Depth        int               // current depth level (0 = top-level)
-	Visited      []string          // agent IDs already in the call chain
-	MaxDepth     int               // max allowed depth (0 = use DefaultMaxHandoffDepth)
-	ParentRunKey string            // parent run session key for cascade stop tracking
+	FromAgentID      string
+	ToAgentID        string
+	Task             string
+	Context          map[string]string // k-v to write to blackboard before handoff
+	Depth            int               // current depth level (0 = top-level)
+	Visited          []string          // agent IDs already in the call chain
+	MaxDepth         int               // max allowed depth (0 = use DefaultMaxHandoffDepth)
+	ParentRunKey     string            // parent run session key for cascade stop tracking
+	AllowlistChecker AllowlistChecker  // optional ACL checker; nil = allow all
 }
 
 // HandoffResult contains the outcome of a handoff execution.
@@ -125,6 +126,15 @@ func ExecuteHandoff(
 			AgentID: req.ToAgentID,
 			Success: false,
 			Error:   fmt.Sprintf("agent %q not found", req.ToAgentID),
+		}
+	}
+
+	// ACL enforcement: check if handoff is allowed by policy
+	if req.AllowlistChecker != nil && !req.AllowlistChecker.CanHandoff(req.FromAgentID, req.ToAgentID) {
+		return &HandoffResult{
+			AgentID: req.ToAgentID,
+			Success: false,
+			Error:   fmt.Sprintf("agent %q not allowed to handoff to %q", req.FromAgentID, req.ToAgentID),
 		}
 	}
 

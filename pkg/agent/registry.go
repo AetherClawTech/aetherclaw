@@ -7,6 +7,7 @@ import (
 	"github.com/AetherClawTech/aetherclaw/pkg/logger"
 	"github.com/AetherClawTech/aetherclaw/pkg/providers"
 	"github.com/AetherClawTech/aetherclaw/pkg/routing"
+	"github.com/AetherClawTech/aetherclaw/pkg/tools"
 )
 
 // AgentRegistry manages multiple agent instances and routes messages to them.
@@ -77,6 +78,16 @@ func (r *AgentRegistry) ListAgentIDs() []string {
 		ids = append(ids, id)
 	}
 	return ids
+}
+
+// GetAgentTools returns the tool registry for the given agent ID.
+// Implements mcpclient.AgentToolsProvider for MCP health monitor re-registration.
+func (r *AgentRegistry) GetAgentTools(agentID string) *tools.ToolRegistry {
+	agent, ok := r.GetAgent(agentID)
+	if !ok {
+		return nil
+	}
+	return agent.Tools
 }
 
 // CanSpawnSubagent checks if parentAgentID is allowed to spawn targetAgentID.
