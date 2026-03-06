@@ -54,8 +54,8 @@ Consume external MCP servers to extend AetherClaw's capabilities without writing
 - [x] Dynamic tool discovery and registration
 - [x] Automatic tool registration to all agents at startup
 - [x] Graceful lifecycle management (start/stop with agent loop)
-- [ ] MCP server health monitoring and auto-reconnect
-- [ ] Per-agent MCP server filtering
+- [x] MCP server health monitoring and auto-reconnect
+- [x] Per-agent MCP server filtering
 
 ### Quick Wins
 
@@ -126,8 +126,8 @@ Capabilities that go beyond what existing AI agent platforms offer.
 Orchestrate multiple external MCP servers through AetherClaw's MCP client — unified tool namespace, health management, and dynamic discovery.
 
 - [ ] Tool namespace management (avoid collisions between MCP sources)
-- [ ] MCP server health monitoring and auto-reconnect
-- [ ] Per-agent MCP server filtering (allow/deny lists per agent)
+- [x] MCP server health monitoring and auto-reconnect
+- [x] Per-agent MCP server filtering (allow/deny lists per agent)
 - [ ] Dynamic MCP server discovery (config reload without restart)
 
 ### Plugin Architecture via MCP

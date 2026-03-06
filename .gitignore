@@ -10,6 +10,8 @@ build/
 *.out
 /aetherclaw
 /aetherclaw-test
+/mcpserver
+/picoclaw
 cmd/**/workspace
 
 # AetherClaw specific
